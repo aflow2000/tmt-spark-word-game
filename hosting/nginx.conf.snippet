@@ -1,0 +1,5 @@
+# nginx — inside the server {} block for the TMT Spark site
+location ~ ^/spark-word/\d+/?$ {
+    try_files /index.html =404;      # query string (?t=TOKEN) is kept
+}
+location = /admin { try_files /admin.html =404; }

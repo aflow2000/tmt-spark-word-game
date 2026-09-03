@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    { "source": "/spark-word/:issue(\\d+)", "destination": "/index.html" },
+    { "source": "/admin", "destination": "/admin.html" }
+  ],
+  "headers": [
+    { "source": "/admin.html", "headers": [ { "key": "X-Robots-Tag", "value": "noindex" } ] }
+  ]
+}

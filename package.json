@@ -1,0 +1,10 @@
+{
+  "name": "tmt-spark-spark-word",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Spark Word — TMT Spark's newsletter-driven industry word game. Static front end + Supabase. No runtime dependencies.",
+  "scripts": {
+    "build": "node scripts/build-config.js",
+    "serve": "python3 -m http.server 8080"
+  }
+}

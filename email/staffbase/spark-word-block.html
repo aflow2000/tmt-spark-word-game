@@ -1,0 +1,67 @@
+<!--
+  SPARK WORD — Staffbase Email block (Outlook-safe)
+  ----------------------------------------------------------------
+  Paste into a Staffbase Email draft via the Rich Text Editor (Staffbase
+  supports pasted HTML but recommends native blocks — see README-STAFFBASE.md
+  for the native-blocks recipe, which is the preferred route).
+
+  Staffbase personalisation tags (case-sensitive, from your custom-data CSV):
+    {{gameUrl}}    personal game link  (export: admin → Subscribers & links → Staffbase CSV)
+    {{firstName}}  first name (optional greeting)
+  For a GENERIC send (no CSV), replace {{gameUrl}} with the public link:
+    https://YOUR-SITE/index.html?ref=staffbase&company=Turner%20%26%20Townsend#spark-word
+  Replace 014 with the issue number and the "people played" figure from admin → Analytics.
+-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0;padding:0;">
+  <tr>
+    <td align="center" style="padding:20px 0;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background-color:#0B111E;border:1px solid #212C42;">
+        <tr>
+          <td style="padding:26px 30px 8px 30px;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:2px;color:#4DA3FF;text-transform:uppercase;">
+            &#9889;&nbsp; SPARK WORD &nbsp;&middot;&nbsp; ISSUE 014
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 30px 6px 30px;font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:34px;color:#EDF1F7;">
+            Five letters. Six guesses. <span style="color:#4DA3FF;font-style:italic;">One industry.</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:8px 30px 18px 30px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:23px;color:#A7B4C4;">
+            {{firstName}}, how well do you know the world you're building? This issue hides a five-letter term from the industries we work in. Crack it, learn what it means, and see how you rank against the TMT industry.
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 30px 22px 30px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="36" height="36" bgcolor="#1B2740" align="center" style="width:36px;height:36px;font-family:Georgia,serif;font-size:18px;font-weight:bold;color:#6C7A8C;">S</td><td width="6" style="width:6px;"></td>
+                <td width="36" height="36" bgcolor="#D9C892" align="center" style="width:36px;height:36px;font-family:Georgia,serif;font-size:18px;font-weight:bold;color:#1E1A0E;">P</td><td width="6" style="width:6px;"></td>
+                <td width="36" height="36" bgcolor="#1B2740" align="center" style="width:36px;height:36px;font-family:Georgia,serif;font-size:18px;font-weight:bold;color:#6C7A8C;">A</td><td width="6" style="width:6px;"></td>
+                <td width="36" height="36" bgcolor="#4DA3FF" align="center" style="width:36px;height:36px;font-family:Georgia,serif;font-size:18px;font-weight:bold;color:#0A1B33;">R</td><td width="6" style="width:6px;"></td>
+                <td width="36" height="36" bgcolor="#4DA3FF" align="center" style="width:36px;height:36px;font-family:Georgia,serif;font-size:18px;font-weight:bold;color:#0A1B33;">K</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 30px 16px 30px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" bgcolor="#4DA3FF" style="padding:0;">
+                  <a href="{{gameUrl}}" target="_blank" style="display:inline-block;padding:13px 26px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#0A1B33;text-decoration:none;">Play Issue 014 &rarr;</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 30px 26px 30px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:20px;color:#6C7A8C;">
+            <span style="color:#A7B4C4;font-weight:bold;">387 people played last issue.</span> Can you make the Top 10?<br>
+            <span style="font-size:11px;">This link is personal to you &mdash; it keeps your streak and your rank.</span>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

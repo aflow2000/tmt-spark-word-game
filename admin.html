@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Spark Word · Admin · TMT Spark</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B111E'/%3E%3Cpath d='M32 8 L37.5 26.5 L56 32 L37.5 37.5 L32 56 L26.5 37.5 L8 32 L26.5 26.5 Z' fill='%23D9C892'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/admin.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2.4 L14.1 9.9 L21.6 12 L14.1 14.1 L12 21.6 L9.9 14.1 L2.4 12 L9.9 9.9 Z" fill="currentColor"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.2 2 L5 13.4 h5.4 L9.6 22 L19 10.4 h-5.4 Z" fill="currentColor"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 11 v5.4 M12 7.4 v.1"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.6 L9.6 17.6 L19.5 6.8"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12 h14 M13 6.5 l5.5 5.5 -5.5 5.5"/></symbol>
+</defs></svg>
+
+<header id="top">
+  <div class="container navwrap">
+    <a class="logo" href="index.html" aria-label="TMT Spark — home">
+      <svg aria-hidden="true"><use href="#i-spark"/></svg>
+      <span><span class="lw">TMT&nbsp;<em>Spark</em></span><span class="by">Spark Word · Admin</span></span>
+    </a>
+    <span class="admin-badge" id="modeBadge">Admin</span>
+    <div class="who" id="who" hidden><span class="email">Signed in as <b id="whoEmail"></b></span><button class="btn btn-ghost btn-sm" id="signOut">Sign out</button></div>
+  </div>
+  <div class="container"><nav class="tabs" id="tabs" hidden aria-label="Admin sections">
+    <button data-tab="overview" class="on">Overview</button>
+    <button data-tab="issues">Issues</button>
+    <button data-tab="words">Word bank</button>
+    <button data-tab="subs">Subscribers &amp; links</button>
+    <button data-tab="analytics">Analytics</button>
+    <button data-tab="email">Email module</button>
+    <button data-tab="settings">Settings</button>
+  </nav></div>
+</header>
+
+<main class="container">
+
+  <!-- ============ login ============ -->
+  <section id="login" class="login" hidden>
+    <p class="eyebrow">Spark Word</p>
+    <h1>Editor sign-in</h1>
+    <p>Admin access is a Supabase Auth account listed in the <code>admins</code> table. Sign in with your password, or get a magic link.</p>
+    <form class="form-grid" id="loginForm">
+      <div><label for="lEmail">Email</label><input id="lEmail" type="email" autocomplete="username" required></div>
+      <div id="pwRow"><label for="lPass">Password</label><input id="lPass" type="password" autocomplete="current-password"></div>
+      <div class="form-actions"><button class="btn btn-primary" type="submit" id="loginBtn">Sign in</button></div>
+    </form>
+    <p class="alt">Prefer a magic link? <button type="button" id="magicBtn">Email me a sign-in link</button></p>
+    <p class="alt" id="loginMsg" role="alert"></p>
+  </section>
+
+  <!-- ============ not an admin ============ -->
+  <section id="notAdmin" class="login" hidden>
+    <p class="eyebrow">Spark Word</p>
+    <h1>Not on the admin list</h1>
+    <p>You're signed in as <b id="naEmail" style="color:var(--ink)"></b>, but that account isn't in the <code>admins</code> table. Ask an owner to run:</p>
+    <textarea class="code" id="naSql" readonly style="min-height:90px"></textarea>
+    <div class="form-actions"><button class="btn btn-outline btn-sm" id="naSignOut">Sign out</button></div>
+  </section>
+
+  <!-- ============ overview ============ -->
+  <section class="view" id="view-overview">
+    <div class="sec-head"><div><p class="eyebrow">Overview</p><h2 class="h2">Spark Word at a glance</h2><p class="lede">One word per issue, chosen by hand. Activate an issue when the newsletter ships; the previous one archives itself.</p></div>
+      <button class="btn btn-primary" data-open-issue="new">New issue <svg width="14" height="14" aria-hidden="true"><use href="#i-arrow"/></svg></button></div>
+    <div id="ovNote"></div>
+    <div class="stat-row" id="ovStats"></div>
+    <div class="grid2">
+      <div class="card hi" id="ovActive"></div>
+      <div class="card" id="ovNext"></div>
+    </div>
+    <div class="card">
+      <h3>Newsletter workflow</h3>
+      <p>1 Create the issue → 2 pick the word from the bank (used words are blocked) → 3 add the hint and the post-game explanation → 4 <b style="color:var(--ink)">Preview game</b> → 5 Activate (or schedule) → 6 export personalised links → 7 paste the email module into the newsletter.</p>
+      <div class="form-actions"><button class="btn btn-outline btn-sm" data-tab-go="issues">Manage issues</button><button class="btn btn-outline btn-sm" data-tab-go="subs">Generate links</button><button class="btn btn-outline btn-sm" data-tab-go="email">Email module</button></div>
+    </div>
+  </section>
+
+  <!-- ============ issues ============ -->
+  <section class="view" id="view-issues">
+    <div class="sec-head"><div><p class="eyebrow">Issues</p><h2 class="h2">Every issue, one Spark Word</h2><p class="lede">Only one issue is active at a time. Scheduled issues activate on their publication date if you run <code>admin_activate_due_issues()</code> from pg_cron — or press Activate yourself.</p></div>
+      <button class="btn btn-primary" data-open-issue="new">New issue</button></div>
+    <div class="toolbar"><label class="chip" style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="showAnswers" style="accent-color:var(--spark)"> Show answers</label></div>
+    <div class="tbl-wrap" id="issuesTable"></div>
+  </section>
+
+  <!-- ============ word bank ============ -->
+  <section class="view" id="view-words">
+    <div class="sec-head"><div><p class="eyebrow">Word bank</p><h2 class="h2">The curated answer pool</h2><p class="lede">Five-letter industry terms with a definition and a suggested hint. A word marked <span class="tag used">used</span> was already an issue's answer and can't be picked again without an explicit override.</p></div>
+      <button class="btn btn-primary" id="addWordBtn">Add word</button></div>
+    <div class="toolbar">
+      <input type="search" id="wordSearch" placeholder="Search word or definition…" aria-label="Search word bank">
+      <select id="wordCat" aria-label="Category"><option value="">All categories</option></select>
+      <label class="chip" style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="wordAvail" style="accent-color:var(--spark)"> Available only</label>
+      <span class="spacer"></span><span class="mono dim-t" id="wordCount" style="font-size:11px;letter-spacing:.14em"></span>
+    </div>
+    <div class="tbl-wrap" id="wordsTable"></div>
+  </section>
+
+  <!-- ============ subscribers & links ============ -->
+  <section class="view" id="view-subs">
+    <div class="sec-head"><div><p class="eyebrow">Subscribers &amp; links</p><h2 class="h2">Personalised game links</h2><p class="lede">Each subscriber has an opaque token. The newsletter link <code>/spark-word/014?t=TOKEN</code> recognises them without an account and never exposes their email.</p></div></div>
+    <div class="grid2">
+      <div class="card">
+        <h3>Export mail-merge links</h3>
+        <p>One row per newsletter subscriber with their personal game link. Pick the format your email tool expects — the Staffbase option produces the custom-data CSV Staffbase Email imports (<code>identifier</code> first), so <code>{{gameUrl}}</code> becomes a personalisation tag.</p>
+        <div class="form-grid"><div><label for="linkIssue">Issue</label><select id="linkIssue"></select></div>
+          <div><label for="linkFormat">CSV format</label><select id="linkFormat"><option value="generic">Generic mail merge (email, first_name, last_name, company, game_url)</option><option value="staffbase">Staffbase custom data (identifier, firstName, lastName, company, gameUrl)</option></select></div>
+          <div class="full"><label class="check"><input type="checkbox" id="linkNewsOnly" checked> Newsletter subscribers only</label></div></div>
+        <div class="form-actions"><button class="btn btn-primary btn-sm" id="exportLinks">Download CSV</button><button class="btn btn-outline btn-sm" id="copyLinks">Copy as text</button><span class="dim-t" id="linkCount" style="font-size:12.5px"></span></div>
+      </div>
+      <div class="card">
+        <h3>Import subscribers</h3>
+        <p>Paste CSV (with or without a header): <code>email, first_name, last_name, company</code>. Existing emails are updated and keep their token; new ones get a fresh token.</p>
+        <textarea class="code" id="importBox" placeholder="email,first_name,last_name,company&#10;sarah@example.com,Sarah,Mitchell,NVIDIA" style="min-height:120px"></textarea>
+        <div class="form-actions"><button class="btn btn-primary btn-sm" id="importBtn">Import</button><span class="dim-t" id="importMsg" style="font-size:12.5px"></span></div>
+      </div>
+    </div>
+    <div class="toolbar"><input type="search" id="subSearch" placeholder="Search name, email, company…" aria-label="Search subscribers"><span class="spacer"></span><span class="mono dim-t" id="subCount" style="font-size:11px;letter-spacing:.14em"></span></div>
+    <div class="tbl-wrap" id="subsTable"></div>
+  </section>
+
+  <!-- ============ analytics ============ -->
+  <section class="view" id="view-analytics">
+    <div class="sec-head"><div><p class="eyebrow">Analytics</p><h2 class="h2">How each issue played</h2><p class="lede">Recipients come from the issue record; clicks are game views that arrived from a newsletter link; everything else is computed from games and events.</p></div>
+      <div class="toolbar" style="margin:0"><select id="anIssue" aria-label="Issue"></select></div></div>
+    <div id="anBody"></div>
+  </section>
+
+  <!-- ============ email ============ -->
+  <section class="view" id="view-email">
+    <div class="sec-head"><div><p class="eyebrow">Email module</p><h2 class="h2">Drop this into the newsletter</h2><p class="lede">Table-based, inline-styled, no JavaScript. Merge fields: <code>{{ISSUE_NUMBER}}</code>, <code>{{GAME_URL}}</code>, <code>{{LAST_PLAYERS}}</code>. The game itself runs on the web — the CTA opens each reader's personal link.</p></div>
+      <div class="toolbar" style="margin:0"><select id="emIssue" aria-label="Issue"></select><button class="btn btn-primary btn-sm" id="copyEmail">Copy HTML</button></div></div>
+    <div class="grid2">
+      <div class="email-frame"><iframe id="emFrame" title="Email module preview"></iframe></div>
+      <div><span class="lbl">HTML (merge fields left as placeholders)</span><textarea class="code" id="emCode" readonly style="min-height:600px"></textarea></div>
+    </div>
+  </section>
+
+  <!-- ============ settings ============ -->
+  <section class="view" id="view-settings">
+    <div class="sec-head"><div><p class="eyebrow">Settings</p><h2 class="h2">Game rules &amp; site</h2><p class="lede">Stored in <code>sw_settings</code>. Changes apply to the next game a player starts.</p></div>
+      <button class="btn btn-outline btn-sm" id="recomputeBtn">Recompute all player stats</button></div>
+    <div class="card" id="settingsBody"></div>
+    <div class="card">
+      <h3>Admins</h3>
+      <p>Editors are Supabase Auth users listed in <code>admins</code>. Add one with:</p>
+      <textarea class="code" readonly style="min-height:80px">insert into admins (user_id, email, role)
+select id, email, 'editor' from auth.users where email = 'colleague@turntown.com';</textarea>
+    </div>
+  </section>
+</main>
+
+<!-- issue editor -->
+<div class="veil" id="issueVeil"><div class="sheet" role="dialog" aria-label="Issue editor" id="issueSheet"></div></div>
+<!-- word editor -->
+<div class="veil" id="wordVeil"><div class="sheet" role="dialog" aria-label="Word editor" id="wordSheet" style="max-width:640px"></div></div>
+<div id="toast" role="status"><span id="toastTxt"></span></div>
+
+<script src="assets/spark-word-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+<script src="assets/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!--
+  SPARK WORD — newsletter module (drop into any TMT Spark email)
+  ------------------------------------------------------------------
+  Table-based, inline-styled, no JavaScript (email clients block it).
+  Merge fields — replace with your ESP's syntax (e.g. {{ }} / *| |*):
+    {{ISSUE_NUMBER}}   → 014
+    {{GAME_URL}}       → personalised link from admin → Subscribers & links
+                         e.g. https://tmtspark.com/spark-word/014?t=TOKEN
+    {{LAST_PLAYERS}}   → players last issue (admin → Analytics)
+    {{LAST_WORD}}      → last issue's word (optional teaser line)
+  Colours are the TMT Spark tokens: navy #0B111E, spark #4DA3FF, wheat #D9C892.
+-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0;padding:0;background:#0B111E;">
+  <tr>
+    <td align="center" style="padding:28px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#101726;border:1px solid #212C42;border-radius:18px;">
+        <tr>
+          <td style="padding:30px 32px 10px 32px;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:11px;letter-spacing:3px;color:#4DA3FF;text-transform:uppercase;">
+            &#9889;&nbsp; Spark Word &nbsp;&middot;&nbsp; Issue {{ISSUE_NUMBER}}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 32px 6px 32px;font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.15;color:#EDF1F7;">
+            Five letters.<br>Six guesses.<br><span style="color:#4DA3FF;font-style:italic;">One industry.</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:12px 32px 22px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#A7B4C4;">
+            How well do you know the world you're building? Every issue of TMT Spark hides a five-letter term from the industries we work in. Crack it, learn what it means, and see how you rank against the TMT industry.
+          </td>
+        </tr>
+        <!-- mini board (pure tables, renders everywhere) -->
+        <tr>
+          <td style="padding:0 32px 24px 32px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="width:38px;height:38px;border-radius:8px;background:#1B2740;text-align:center;font-family:Georgia,serif;font-size:18px;font-weight:bold;color:#6C7A8C;">S</td><td style="width:6px;"></td>
+                <td style="width:38px;height:38px;border-radius:8px;background:#D9C892;text-align:center;font-family:Georgia,serif;font-size:18px;font-weight:bold;color:#1E1A0E;">P</td><td style="width:6px;"></td>
+                <td style="width:38px;height:38px;border-radius:8px;background:#1B2740;text-align:center;font-family:Georgia,serif;font-size:18px;font-weight:bold;color:#6C7A8C;">A</td><td style="width:6px;"></td>
+                <td style="width:38px;height:38px;border-radius:8px;background:#4DA3FF;text-align:center;font-family:Georgia,serif;font-size:18px;font-weight:bold;color:#0A1B33;">R</td><td style="width:6px;"></td>
+                <td style="width:38px;height:38px;border-radius:8px;background:#4DA3FF;text-align:center;font-family:Georgia,serif;font-size:18px;font-weight:bold;color:#0A1B33;">K</td>
+              </tr>
+              <tr><td colspan="9" style="height:6px;"></td></tr>
+              <tr>
+                <td style="width:38px;height:38px;border-radius:8px;border:2px solid #4DA3FF;background:#101726;"></td><td style="width:6px;"></td>
+                <td style="width:38px;height:38px;border-radius:8px;border:2px solid #212C42;background:#101726;"></td><td style="width:6px;"></td>
+                <td style="width:38px;height:38px;border-radius:8px;border:2px solid #212C42;background:#101726;"></td><td style="width:6px;"></td>
+                <td style="width:38px;height:38px;border-radius:8px;border:2px solid #212C42;background:#101726;"></td><td style="width:6px;"></td>
+                <td style="width:38px;height:38px;border-radius:8px;border:2px solid #212C42;background:#101726;"></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <!-- CTA (bulletproof button) -->
+        <tr>
+          <td style="padding:0 32px 18px 32px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" bgcolor="#4DA3FF" style="border-radius:999px;">
+                  <a href="{{GAME_URL}}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:#0A1B33;text-decoration:none;border-radius:999px;">
+                    Play Issue {{ISSUE_NUMBER}} &rarr;
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 32px 28px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;color:#6C7A8C;border-top:0;">
+            <span style="color:#A7B4C4;font-weight:600;">{{LAST_PLAYERS}} people played last issue.</span> Can you make the Top 10?<br>
+            <span style="font-family:'SF Mono',Menlo,Consolas,monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;">This link is personal to you &mdash; it keeps your streak and your rank.</span>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

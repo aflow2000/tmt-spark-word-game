@@ -1,0 +1,6 @@
+# Netlify — Spark Word deep links
+# /spark-word/014?t=TOKEN is served by index.html, which hops to
+# /index.html?issue=14&t=TOKEN#spark-word before loading anything.
+# Query strings are preserved on 200 rewrites.
+/spark-word/*   /index.html   200
+/admin          /admin.html   200

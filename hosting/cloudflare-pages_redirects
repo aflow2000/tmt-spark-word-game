@@ -1,0 +1,3 @@
+# Cloudflare Pages — save as `_redirects` in the site root
+/spark-word/*   /index.html   200
+/admin          /admin.html   200
