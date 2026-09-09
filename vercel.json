@@ -2,13 +2,44 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "buildCommand": "node scripts/build-config.js",
+  "outputDirectory": ".",
   "rewrites": [
-    { "source": "/spark-word/:issue(\\d+)", "destination": "/index.html" },
-    { "source": "/admin", "destination": "/admin.html" }
+    {
+      "source": "/spark-word/:issue(\\d+)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin.html"
+    }
   ],
   "headers": [
-    { "source": "/admin.html", "headers": [ { "key": "X-Robots-Tag", "value": "noindex" } ] },
-    { "source": "/spark-word-admin.html", "headers": [ { "key": "X-Robots-Tag", "value": "noindex" } ] },
-    { "source": "/assets/(.*)", "headers": [ { "key": "Cache-Control", "value": "public, max-age=3600" } ] }
+    {
+      "source": "/admin.html",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/spark-word-admin.html",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    }
   ]
 }
