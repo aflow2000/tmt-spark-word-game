@@ -159,10 +159,6 @@ button.chip:hover{border-color:var(--celadon);color:var(--ink)}
   border-radius:2px;background:var(--spark);
 }
 .nav-actions{display:flex;align-items:center;gap:10px}
-.poc-badge{
-  font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;color:var(--dim);
-  border:1px solid var(--line);border-radius:999px;padding:5px 11px;text-transform:uppercase;white-space:nowrap;
-}
 .searchbtn{display:inline-flex;align-items:center;gap:8px;background:var(--pine);border:1px solid var(--line);color:var(--dim);border-radius:999px;padding:8px 14px;font-size:13px}
 .searchbtn:hover{border-color:var(--celadon);color:var(--mut)}
 .searchbtn .kbd{font-family:var(--mono);font-size:10px;border:1px solid var(--line);border-radius:4px;padding:1px 5px}
@@ -242,44 +238,6 @@ h1.display em{font-style:italic;color:var(--spark)}
 .pillar p{color:var(--mut);font-size:13.8px;line-height:1.55;margin:0;flex:1}
 .pillar .p-link{font-size:13px;color:var(--spark);font-weight:600;display:flex;align-items:center;gap:6px}
 button.pillar{cursor:pointer}
-
-/* ---------- flywheel (shared) ---------- */
-.fw-wrap{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(300px,.85fr);gap:44px;align-items:center}
-.fw-stage-holder{position:relative;width:100%;max-width:560px;aspect-ratio:1/1;margin:0 auto}
-.fw-svg{position:absolute;inset:0;width:100%;height:100%}
-.fw-node{
-  position:absolute;transform:translate(-50%,-50%);width:118px;text-align:center;
-  background:none;border:none;padding:0;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:7px;
-}
-.fw-node .nd{
-  width:46px;height:46px;border-radius:50%;background:var(--pine);
-  border:1.5px solid #35486B;display:grid;place-items:center;font-family:var(--mono);font-size:13px;color:var(--mut);
-  transition:all .3s ease;
-}
-.fw-node .nl{font-size:11.5px;line-height:1.3;color:var(--dim);transition:color .3s ease;font-weight:600}
-.fw-node.flip{flex-direction:column-reverse}
-.fw-node:hover .nd{border-color:var(--celadon);color:var(--ink)}
-.fw-node.on .nd{background:var(--spark);border-color:var(--spark);color:#0A1B33;font-weight:700;box-shadow:0 0 0 7px rgba(77,163,255,.14);transform:scale(1.12)}
-.fw-node.on .nl{color:var(--ink)}
-.fw-center{
-  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;width:190px;pointer-events:none;
-}
-.fw-center .fc-ico{color:var(--spark);margin-bottom:8px}
-.fw-center .fc-t{font-family:var(--serif);font-style:italic;font-size:1.05rem;color:var(--mut)}
-.fw-center .fc-n{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--dim);margin-top:6px;text-transform:uppercase}
-.fw-detail{background:var(--pine);border:1px solid var(--line);border-radius:18px;padding:30px 30px 26px;position:relative;overflow:hidden}
-.fw-detail::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--spark)}
-.fw-detail .fd-step{font-family:var(--mono);font-size:11px;letter-spacing:.22em;color:var(--spark);text-transform:uppercase;margin-bottom:12px;display:block}
-.fw-detail h3{font-family:var(--serif);font-weight:500;font-size:1.6rem;margin:0 0 12px;min-height:2.2em;display:flex;align-items:center}
-.fw-detail p{color:var(--mut);margin:0 0 22px;min-height:4.4em}
-.fw-dots{display:flex;gap:7px;align-items:center}
-.fw-dots button{width:8px;height:8px;border-radius:50%;border:none;background:#2E3C54;padding:0;transition:all .25s}
-.fw-dots button.on{background:var(--spark);width:22px;border-radius:4px}
-.fw-ctl{display:flex;justify-content:space-between;align-items:center;margin-top:20px;gap:12px}
-.fw-pause{background:none;border:1px solid var(--line);color:var(--dim);border-radius:999px;padding:6px 14px;font-size:12px;display:inline-flex;gap:7px;align-items:center}
-.fw-pause:hover{color:var(--ink);border-color:var(--celadon)}
-.fw-loopnote{margin-top:34px;display:flex;align-items:center;gap:12px;color:var(--dim);font-size:13px}
-.fw-loopnote svg{color:var(--spark);flex:none}
 
 /* ---------- series ---------- */
 .series-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
@@ -863,16 +821,20 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
 .rv.in{transform:none}
 
 /* ---------- responsive ---------- */
-@media (max-width:1360px){
-  .poc-badge{display:none}
-}
 @media (max-width:1240px){
   .searchbtn .sb-t,.searchbtn .kbd{display:none}
 }
-@media (max-width:1280px){
-  .navlinks{display:none}
-  .burger{display:block;margin-left:auto}
-  .nav-actions .btn{display:none}
+@media (max-width:760px){
+  .container{padding-left:14px;padding-right:14px}
+  .navwrap{height:66px;min-height:66px;flex-wrap:nowrap;gap:8px}
+  .logo .by{display:none}
+  .logo .lw{font-size:16px}
+  .logo .lw em{font-size:18px}
+  .navlinks{display:flex;width:auto;justify-content:flex-start;margin-left:auto;gap:0}
+  .navlinks button{font-size:11px;padding:7px 5px}
+  .nav-actions{margin-left:0}
+  .burger{display:none}
+  .nav-actions .btn{display:inline-flex;padding:8px 11px;font-size:11px}
 }
 @media (max-width:1080px){
   .pillars{grid-template-columns:repeat(2,1fr)}
@@ -970,36 +932,20 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
       </span>
     </button>
     <nav class="navlinks" aria-label="Primary">
-      <button data-go="insights">Insights</button>
-      <button data-go="explain">Explain It</button>
-      <button data-go="spark-word"><svg class="nb" aria-hidden="true"><use href="#i-bolt"/></svg>Spark Word</button>
+      <button data-go="spark-word">Spark Word</button>
       <button data-go="events">Events</button>
-      <button data-go="industries">Industries</button>
-      <button data-go="learning">Spark Learning</button>
-      <button data-go="playbook">Playbook</button>
-      <button data-go="about">About</button>
+      <button data-go="explain">Explain It</button>
     </nav>
     <div class="nav-actions">
-      <span class="poc-badge">Proof of concept</span>
-      <button class="searchbtn" id="openSearch" aria-label="Search TMT Spark">
-        <svg width="14" height="14" aria-hidden="true"><use href="#i-search"/></svg>
-        <span class="sb-t">Search</span><span class="kbd">⌘K</span>
-      </button>
       <button class="btn btn-primary btn-sm" data-join>Join Spark</button>
       <button class="burger" id="burger" aria-label="Menu" aria-expanded="false">☰</button>
     </div>
   </div>
   <div id="mobilemenu">
-    <button data-go="home">Home</button>
-    <button data-go="insights">Insights</button>
-    <button data-go="explain">Explain It</button>
-    <button data-go="spark-word"><svg class="nb" aria-hidden="true"><use href="#i-bolt"/></svg>Spark Word</button>
+    <button data-go="spark-word">Spark Word</button>
     <button data-go="events">Events</button>
-    <button data-go="industries">Industries</button>
-    <button data-go="learning">Spark Learning</button>
-    <button data-go="playbook">Playbook</button>
-    <button data-go="about">About</button>
-    <button class="btn btn-primary" data-join>Join TMT Spark</button>
+    <button data-go="explain">Explain It</button>
+    <button class="btn btn-primary" data-join>Join Spark</button>
   </div>
 </header>
 
@@ -1027,7 +973,6 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
         <button class="btn btn-outline" data-go="events">Upcoming Events</button>
         <button class="btn btn-ghost" data-join>Join TMT Spark →</button>
       </div>
-      <p class="hero-note"><b>Proof of concept</b> — a working prototype by the Turner &amp; Townsend Technology, Media &amp; Telecommunications practice. All content, guests, events and metrics shown are illustrative.</p>
     </div>
   </div>
 
@@ -1090,12 +1035,7 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
   <!-- Spark Word promo -->
   <section class="section tight" style="padding-top:0" id="homeSparkWord">
     <div class="container">
-      <div class="sw-promo">
-        <div class="sw-mini" aria-hidden="true">
-          <div class="sw-row"><div class="sw-tile a">C</div><div class="sw-tile p">R</div><div class="sw-tile a">A</div><div class="sw-tile a">N</div><div class="sw-tile a">E</div></div>
-          <div class="sw-row"><div class="sw-tile c">S</div><div class="sw-tile c">P</div><div class="sw-tile c">A</div><div class="sw-tile c">R</div><div class="sw-tile c">K</div></div>
-          <div class="sw-row"><div class="sw-tile cursor"></div><div class="sw-tile"></div><div class="sw-tile"></div><div class="sw-tile"></div><div class="sw-tile"></div></div>
-        </div>
+      <div class="sw-promo" style="grid-template-columns:1fr">
         <div>
           <p class="eyebrow">Spark Word · A new word every two weeks</p>
           <h2 class="h2">Five letters. Six guesses. <em>One industry.</em></h2>
@@ -1105,36 +1045,6 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
             <button class="btn btn-outline" data-go="spark-word" data-sw-view="leaderboard">See the leaderboard</button>
           </div>
           <p class="hero-note" id="swPromoNote"><b>Hundreds of readers</b> play every issue. Can you make the Top 10?</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- flywheel -->
-  <section class="section" style="background:var(--pine);border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft)">
-    <div class="container">
-      <div class="sec-head">
-        <p class="eyebrow">How TMT Spark works</p>
-        <h2 class="h2">A flywheel, not a funnel.</h2>
-        <p class="lede">Educate first. Build relationships second. Business follows naturally. Every stage feeds the next — and the cycle compounds instead of ending at a pitch.</p>
-      </div>
-      <div class="fw-wrap">
-        <div class="fw-stage-holder" id="fw7" role="group" aria-label="The seven-stage TMT Spark flywheel"></div>
-        <div>
-          <div class="fw-detail">
-            <span class="fd-step" id="fw7step">Stage 1 of 7</span>
-            <h3 id="fw7title">Identify what's changing</h3>
-            <p id="fw7desc">Monitor major trends across technology, media, telecom, infrastructure, construction and capital investment.</p>
-            <div class="fw-dots" id="fw7dots" role="tablist" aria-label="Flywheel stages"></div>
-            <div class="fw-ctl">
-              <button class="fw-pause" id="fw7pause" aria-pressed="false"><svg width="12" height="12" aria-hidden="true"><use href="#i-pause"/></svg><span>Pause</span></button>
-              <span class="mono" style="font-size:10px;letter-spacing:.18em;color:var(--dim)">AUTO-CYCLING</span>
-            </div>
-          </div>
-          <div class="fw-loopnote">
-            <svg width="20" height="20" aria-hidden="true"><use href="#i-loop"/></svg>
-            <span>Stage 7 feeds Stage 1, and the cycle repeats. Every conversation makes the next newsletter, event and relationship easier — that's the flywheel.</span>
-          </div>
         </div>
       </div>
     </div>
@@ -1456,7 +1366,7 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
         <h2 class="h2" style="font-size:clamp(1.7rem,3vw,2.3rem)">The archive</h2>
       </div>
       <div class="archive-row">
-        <div class="cover" role="button" tabindex="0" data-demo-toast="Archive editions are illustrative in this proof of concept.">
+        <div class="cover" role="button" tabindex="0" data-demo-toast="This archive edition is not yet available.">
           <div class="c-meta">Edition 013 · August 2026</div>
           <h4>The Power Issue</h4>
           <ul>
@@ -1468,7 +1378,7 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
           <span class="c-open">Read edition →</span>
           <button class="c-sw" data-sw-issue="13"><svg width="11" height="11" aria-hidden="true"><use href="#i-bolt"/></svg> Spark Word · Issue 013 · play in archive</button>
         </div>
-        <div class="cover" role="button" tabindex="0" data-demo-toast="Archive editions are illustrative in this proof of concept.">
+        <div class="cover" role="button" tabindex="0" data-demo-toast="This archive edition is not yet available.">
           <div class="c-meta">Edition 012 · July 2026</div>
           <h4>Signal &amp; Stream</h4>
           <ul>
@@ -1480,7 +1390,7 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
           <span class="c-open">Read edition →</span>
           <button class="c-sw" data-sw-issue="12"><svg width="11" height="11" aria-hidden="true"><use href="#i-bolt"/></svg> Spark Word · Issue 012 · play in archive</button>
         </div>
-        <div class="cover" role="button" tabindex="0" data-demo-toast="Archive editions are illustrative in this proof of concept." id="cov11">
+        <div class="cover" role="button" tabindex="0" data-demo-toast="This archive edition is not yet available." id="cov11">
           <div class="c-meta">Edition 011 · June 2026</div>
           <h4>Concrete &amp; Code</h4>
           <ul>
@@ -1757,7 +1667,7 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
 
       <div class="intern-banner">
         <span class="mono">Internal</span>
-        <span>Spark Learning is the employee-facing side of TMT Spark — Turner &amp; Townsend teams only. It's shown openly here as part of the proof of concept.</span>
+        <span>Spark Learning is the employee-facing side of TMT Spark for Turner &amp; Townsend teams.</span>
       </div>
 
       <div class="sec-head">
@@ -1884,7 +1794,7 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
 
       <div class="intern-banner">
         <span class="mono">Internal</span>
-        <span>The Spark Playbook is a business-development tool for Turner &amp; Townsend pursuit teams. Practices shown are illustrative for this proof of concept — not actual company guidance.</span>
+        <span>The Spark Playbook is a business-development tool for Turner &amp; Townsend pursuit teams.</span>
       </div>
 
       <div class="sec-head split">
@@ -2148,7 +2058,7 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
 
       <!-- generator -->
       <div class="gen" id="genBox">
-        <span class="lbl">Opener generator · POC demo</span>
+        <span class="lbl">Opener generator</span>
         <h3>Draft an opener in one click.</h3>
         <p class="gen-lede">Pick a sector and a service line. Spark assembles a first-draft opening paragraph from current playbook content — always tailored by the pursuit team before it ships.</p>
         <span class="lbl">Sector</span>
@@ -2275,7 +2185,7 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
       <div class="sec-head">
         <p class="eyebrow">A relationship, step by step</p>
         <h2 class="h2">From invitation to opportunity.</h2>
-        <p class="lede">One illustrative journey through the flywheel — no real company, but a very real pattern.</p>
+        <p class="lede">One illustrative journey from invitation to opportunity.</p>
       </div>
 
       <div class="journey-head">
@@ -2338,7 +2248,7 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
         <p class="lede">Behind the platform sits a simple production loop: everything Spark hears becomes something Spark publishes — and every output generates new intelligence.</p>
       </div>
       <div class="engine">
-        <div class="eng-bar"><span class="dotg"></span>SPARK CONTENT ENGINE<span class="right">SIMULATED FEED · POC</span></div>
+        <div class="eng-bar"><span class="dotg"></span>SPARK CONTENT ENGINE<span class="right">SIMULATED FEED</span></div>
         <div class="eng-grid">
           <div class="eng-col">
             <h5>Inputs</h5>
@@ -2363,41 +2273,11 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
     </div>
   </section>
 
-  <!-- full flywheel -->
-  <section class="section" style="background:var(--pine);border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft)">
-    <div class="container">
-      <div class="sec-head">
-        <p class="eyebrow">The full loop</p>
-        <h2 class="h2">From news to opportunity — and&nbsp;back.</h2>
-        <p class="lede">The complete TMT Spark engine in one picture. Watch it run, or select any node.</p>
-      </div>
-      <div class="fw-wrap">
-        <div class="fw-stage-holder" id="fw11" role="group" aria-label="The full TMT Spark loop"></div>
-        <div>
-          <div class="fw-detail">
-            <span class="fd-step" id="fw11step">Node 1 of 10</span>
-            <h3 id="fw11title">News</h3>
-            <p id="fw11desc">Something changes in the industry.</p>
-            <div class="fw-dots" id="fw11dots" role="tablist" aria-label="Loop nodes"></div>
-            <div class="fw-ctl">
-              <button class="fw-pause" id="fw11pause" aria-pressed="false"><svg width="12" height="12" aria-hidden="true"><use href="#i-pause"/></svg><span>Pause</span></button>
-              <span class="mono" style="font-size:10px;letter-spacing:.18em;color:var(--dim)">CONTINUOUS LOOP</span>
-            </div>
-          </div>
-          <div class="fw-loopnote">
-            <svg width="20" height="20" aria-hidden="true"><use href="#i-loop"/></svg>
-            <span>More industry insight becomes next month's news judgment. The engine never stops — and it gets smarter every cycle.</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- metrics -->
   <section class="section">
     <div class="container">
       <div class="sec-head">
-        <p class="eyebrow">Proof of concept metrics</p>
+        <p class="eyebrow">Success metrics</p>
         <h2 class="h2">How we'd measure success.</h2>
         <p class="lede">Not as a sales pipeline — as a community. Spark's dashboard tracks learning, participation and relationship development. Opportunity flow is a byproduct, and it's listed last on purpose. <span class="mono" style="font-size:10px;letter-spacing:.14em;color:var(--dim)">ILLUSTRATIVE FIRST-YEAR TARGETS</span></p>
       </div>
@@ -2582,8 +2462,8 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
       </div>
     </div>
     <div class="foot-legal">
-      <span>TMT Spark is a proof-of-concept prototype for the Turner &amp; Townsend Technology, Media &amp; Telecommunications practice. All articles, events, episodes, guests, companies and metrics shown are illustrative.</span>
-      <span class="mono">POC · v1.0 · 2026</span>
+      <span>TMT Spark is produced by the Turner &amp; Townsend Technology, Media &amp; Telecommunications practice.</span>
+      <span class="mono">TMT SPARK · 2026</span>
     </div>
   </div>
 </footer>
@@ -2624,7 +2504,7 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
         </div>
         <button class="btn btn-primary" type="submit" style="margin-top:6px">Join the community</button>
       </form>
-      <p class="demo-note"><svg width="13" height="13" aria-hidden="true"><use href="#i-info"/></svg>Proof-of-concept form — nothing is collected or sent.</p>
+      <p class="demo-note"><svg width="13" height="13" aria-hidden="true"><use href="#i-info"/></svg>This form is not currently connected.</p>
     </div>
     <div class="success" id="joinSuccess">
       <span class="ok"><svg width="26" height="26" aria-hidden="true"><use href="#i-check"/></svg></span>
@@ -2647,7 +2527,7 @@ footer{border-top:1px solid var(--line-soft);background:var(--pine);padding:56px
         <div><label for="rcompany">Company &amp; role</label><input id="rcompany" type="text" placeholder="Example Co · VP of Infrastructure"></div>
         <button class="btn btn-primary" type="submit" style="margin-top:6px">Request a seat</button>
       </form>
-      <p class="demo-note"><svg width="13" height="13" aria-hidden="true"><use href="#i-info"/></svg>Proof-of-concept form — nothing is collected or sent.</p>
+      <p class="demo-note"><svg width="13" height="13" aria-hidden="true"><use href="#i-info"/></svg>This form is not currently connected.</p>
     </div>
     <div class="success" id="regSuccess">
       <span class="ok"><svg width="26" height="26" aria-hidden="true"><use href="#i-check"/></svg></span>
@@ -2724,29 +2604,6 @@ var SIGNALS=[
 "Sports rights reshape streaming economics",
 "Private 5G deployments accelerate in ports and factories",
 "Spark Word: a new five-letter industry term with every issue — can you crack it?"
-];
-
-var STAGES7=[
-{t:"Identify what's changing",d:"Monitor major trends across technology, media, telecom, infrastructure, construction and capital investment."},
-{t:"Explain it",d:"Turn complicated developments into simple monthly insights anyone in the industry can use."},
-{t:"Bring people into the conversation",d:"Invite industry experts, clients and Turner & Townsend leaders into panels, roundtables and interviews."},
-{t:"Build relationships",d:"Turner & Townsend teams and industry participants connect around shared interests rather than sales pitches."},
-{t:"Understand challenges",d:"Conversations naturally uncover industry pain points, expansion plans and investment priorities."},
-{t:"Create opportunities",d:"Where appropriate, Turner & Townsend teams introduce expertise that helps solve those challenges."},
-{t:"Create more content",d:"The conversations generate new insights, newsletter topics and events. Then the cycle repeats."}
-];
-
-var LOOP11=[
-{t:"News",d:"Something changes in the industry — a launch, a deal, a constraint, a price."},
-{t:"Insight",d:"Spark's editorial and research teams work out what it actually means."},
-{t:"Content",d:"It becomes a newsletter story, a 60-second explainer or a live session brief."},
-{t:"Audience",d:"Readers and attendees across the ecosystem engage — clients, prospects, peers, Turner & Townsend teams."},
-{t:"Event",d:"The topic becomes a roundtable, panel or briefing worth showing up for."},
-{t:"Conversation",d:"The right people end up in the same room, talking about their world."},
-{t:"Relationship",d:"Follow-ups happen naturally — no pitch required."},
-{t:"Client understanding",d:"Turner & Townsend hears priorities, plans and pain points firsthand — captured in transcripts, tagged into the playbook."},
-{t:"Opportunity",d:"Where Turner & Townsend can genuinely help, an introduction makes sense."},
-{t:"More industry insight",d:"Every conversation surfaces what's next — which becomes next month's news judgment."}
 ];
 
 var EXPLAINERS=[
@@ -2865,7 +2722,7 @@ a:"A company deploys its own small cellular network — its own radios and core,
 {q:"Why are AI companies expanding in San Francisco?",keys:["san francisco","expanding"],
 a:"Talent gravity. The researchers, founders and capital cluster there, and AI teams prize dense, in-person work — so growth keeps pulling back to the same neighborhoods. <b>The real estate effect:</b> AI leasing is driving the city's office recovery, with speed of fit-out becoming the deciding factor for fast-growing teams."}
 ];
-var ASK_FALLBACK="Good question — in the full build I'd search TMT Spark's knowledge base (every article, explainer, episode and event transcript) to answer that. In this proof of concept I know a fixed set of questions — try one of the suggestions below.";
+var ASK_FALLBACK="Good question. I currently know a fixed set of questions. Try one of the suggestions below.";
 
 var CHART_M=["Oct","Nov","Dec","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep"];
 var CHART_Y=["'25","'25","'25","'26","'26","'26","'26","'26","'26","'26","'26","'26"];
@@ -2974,7 +2831,7 @@ function setupReveal(scope){
   tr.innerHTML=one+one;
 })();
 
-/* ---------------- flywheel builder ---------------- */
+/* ---------------- circular diagram builder ---------------- */
 function polar(cx,cy,r,deg){var a=(deg-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];}
 function buildWheel(opts){
   var holder=$("#"+opts.holder);if(!holder)return null;
@@ -3067,13 +2924,6 @@ function buildWheel(opts){
   });}
   return api;
 }
-buildWheel({holder:"fw7",items:STAGES7,dots:"fw7dots",stepEl:"fw7step",titleEl:"fw7title",descEl:"fw7desc",pauseBtn:"fw7pause",
-  interval:3400,stepWord:"Stage",centerT:"The Spark flywheel",centerN:"Educate · Relate · Repeat",
-  short:["Identify what's changing","Explain it","Bring people in","Build relationships","Understand challenges","Create opportunities","Create more content"]});
-buildWheel({holder:"fw11",items:LOOP11,dots:"fw11dots",stepEl:"fw11step",titleEl:"fw11title",descEl:"fw11desc",pauseBtn:"fw11pause",
-  interval:2200,stepWord:"Node",centerT:"The full loop",centerN:"News → opportunity → news",
-  short:["News","Insight","Content","Audience","Event","Conversation","Relationship","Client understanding","Opportunity","More insight"]});
-
 /* ---------------- explainers ---------------- */
 (function(){
   var grid=$("#exGrid");if(!grid)return;
@@ -3157,8 +3007,8 @@ document.addEventListener("submit",function(e){
   e.preventDefault();
   var kind=f.getAttribute("data-mockform");
   if(kind==="subscribe"){toast("Subscribed — demo only, nothing was sent. Edition 014 would land in your inbox now.");f.reset();}
-  if(kind==="join"){$("#joinForm").style.display="none";$("#joinSuccess").classList.add("on");toast("Welcome to TMT Spark — proof-of-concept demo.");}
-  if(kind==="register"){$("#regForm").style.display="none";$("#regSuccess").classList.add("on");toast("Seat requested — proof-of-concept demo, nothing was sent.");}
+  if(kind==="join"){$("#joinForm").style.display="none";$("#joinSuccess").classList.add("on");toast("Welcome to TMT Spark.");}
+  if(kind==="register"){$("#regForm").style.display="none";$("#regSuccess").classList.add("on");toast("Seat requested. Nothing was sent.");}
 });
 
 /* ---------------- learning: briefs, quiz, glossary ---------------- */
@@ -3439,7 +3289,10 @@ function renderSearch(q){
   });
   res.innerHTML=html;
 }
-$("#openSearch").addEventListener("click",function(){openVeil("searchVeil");renderSearch("");setTimeout(function(){$("#searchInput").focus()},60);});
+var openSearchBtn=$("#openSearch");
+if(openSearchBtn){
+  openSearchBtn.addEventListener("click",function(){openVeil("searchVeil");renderSearch("");setTimeout(function(){$("#searchInput").focus()},60);});
+}
 $("#searchX").addEventListener("click",function(){closeVeil("searchVeil")});
 $("#searchInput").addEventListener("input",function(){renderSearch(this.value)});
 $("#searchRes").addEventListener("click",function(e){
@@ -3452,7 +3305,7 @@ $("#searchRes").addEventListener("click",function(e){
 var askOpen=false,greeted=false;
 function openAsk(){
   askOpen=true;$("#askDrawer").classList.add("on");
-  if(!greeted){greeted=true;sparkSay("Hi — I'm <b>Ask Spark</b>, the TMT knowledge assistant. I answer in plain language for people who work around the industry, not in the server room. In this proof of concept I know a fixed set of questions — try one below.",true);}
+  if(!greeted){greeted=true;sparkSay("Hi, I'm <b>Ask Spark</b>, the TMT knowledge assistant. I answer industry questions in plain language. Try one of the suggestions below.",true);}
   renderSugg();
 }
 function closeAsk(){askOpen=false;$("#askDrawer").classList.remove("on");}
