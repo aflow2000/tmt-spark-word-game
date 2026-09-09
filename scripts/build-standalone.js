@@ -10,8 +10,8 @@
    to edit (or let scripts/build-config.js fill it from env vars).
 
    Also concatenates the SQL into supabase/spark-word-setup.sql (schema +
-   functions + word bank + dictionary + Issue 014) and
-   supabase/spark-word-test-data.sql (sample players and games).
+   functions + word bank + dictionary + the fortnightly issue calendar) and
+   supabase/spark-word-test-data.sql (demo issues, players and games).
 
    Run:  node scripts/build-standalone.js
    ============================================================ */
@@ -159,29 +159,45 @@ ${adminBody}<script>${read("assets/spark-word-dictionary.js")}</script>
 fs.writeFileSync(path.join(R, "spark-word-admin.html"), admin);
 
 /* ---------- combined SQL ---------- */
+const SITE_URL = process.env.SITE_URL || "https://tmt-spark-word-game.vercel.app";
 const banner = (t) => `-- ============================================================\n-- ${t}\n-- ============================================================\n`;
 const cat = (files) => files.map((f) => `\n${banner("FILE: " + f)}${read(f)}`).join("\n");
+if (!fs.existsSync(path.join(R, "supabase/schedule/fortnightly.sql"))) require("./build-schedule-sql.js");
 const setup = `${banner("SPARK WORD — one-shot setup for the Supabase SQL editor")}
 -- Paste this whole file into Supabase → SQL Editor → New query → Run.
 -- It creates the schema, game functions, leaderboards, admin functions,
--- row-level security, the settings, the word bank, the dictionary and
--- the sample Issue 014. Safe to re-run (idempotent where it matters).
+-- row-level security, the settings, the word bank, the guess dictionary and
+-- the fortnightly issue calendar (100 words, one every 14 days, going live
+-- by themselves on their dates). Safe to re-run.
 --
 -- Afterwards:
---   1. Supabase → Authentication → Users → add your admin user (email + password)
---   2. run:  insert into admins (email) values ('you@turnerandtownsend.com');
---   3. run:  update sw_settings set value = 'https://YOUR-APP.vercel.app/spark-word.html' where key = 'site_url';
---            update sw_settings set value = 'query' where key = 'url_style';
---      (or use the Settings tab in spark-word-admin.html)
--- Sample players/games for testing live in spark-word-test-data.sql.
-${cat(["supabase/migrations/001_schema.sql", "supabase/migrations/002_game_functions.sql", "supabase/migrations/003_leaderboards.sql", "supabase/migrations/004_admin.sql", "supabase/migrations/005_rls.sql", "supabase/seed/010_settings.sql", "supabase/seed/020_word_bank.sql", "supabase/seed/030_dictionary.sql", "supabase/seed/040_issues.sql"])}
+--   1. Authentication → Providers → Email: keep it on ("Confirm email" on or off, your choice)
+--   2. Authentication → URL Configuration: Site URL = your site, Redirect URLs = https://YOUR-SITE/**
+--   3. Authentication → Users → Add user (auto-confirm) for the editor, then run:
+--        insert into admins (user_id, email, role) select id, email, 'owner' from auth.users where email = 'you@turnerandtownsend.com';
+--   4. Change the site address below if it is not ${SITE_URL}
+-- Sample players/games for a DEMO project live in spark-word-test-data.sql (not for production).
+${cat(["supabase/migrations/001_schema.sql", "supabase/migrations/002_game_functions.sql", "supabase/migrations/003_leaderboards.sql", "supabase/migrations/004_admin.sql", "supabase/migrations/005_rls.sql", "supabase/seed/010_settings.sql", "supabase/seed/020_word_bank.sql", "supabase/seed/030_dictionary.sql", "supabase/schedule/fortnightly.sql"])}
+
+${banner("SITE ADDRESS — used for newsletter links, share links and email redirects")}
+-- ► EDIT if your site lives somewhere else. Keep url_style = 'path' on Vercel/Netlify (the rewrite
+--   in vercel.json / _redirects serves /spark-word/015); use 'query' on a host without rewrites.
+update sw_settings set value = '${SITE_URL}' where key = 'site_url';
+update sw_settings set value = 'path' where key = 'url_style';
 `;
 fs.writeFileSync(path.join(R, "supabase/spark-word-setup.sql"), setup);
-const test = `${banner("SPARK WORD — optional sample data (players, games, leaderboards)")}
--- Run AFTER spark-word-setup.sql if you want populated leaderboards and the
--- README's test links to work. Remove before go-live:
+const test = `${banner("SPARK WORD — DEMO data: sample issues 011–015, players and games")}
+-- For a demo or development project only. It recreates the newsletter editions shown on the
+-- proof-of-concept site (issue 014 · FIBER active) with illustrative players, so the leaderboards
+-- have something on them. It is NOT compatible with the production fortnightly schedule and
+-- refuses to run on a database that has it. Remove before go-live:
 --   delete from subscribers where notes = 'seed';
-${cat(["supabase/seed/050_test_subscribers.sql", "supabase/seed/060_test_games.sql"])}
+do $$ begin
+  if exists (select 1 from issues where issue_number = 15 and answer <> 'CLOUD') then
+    raise exception 'This demo data is for an empty project: the fortnightly schedule is already installed here.';
+  end if;
+end $$;
+${cat(["supabase/seed/040_issues.sql", "supabase/seed/050_test_subscribers.sql", "supabase/seed/060_test_games.sql"])}
 `;
 fs.writeFileSync(path.join(R, "supabase/spark-word-test-data.sql"), test);
 

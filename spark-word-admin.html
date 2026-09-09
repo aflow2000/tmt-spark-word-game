@@ -964,7 +964,8 @@ window.SPARK_WORD_BANK=[["MODEL","AI & Compute","The trained system at the heart
       { key: "streak_bonus_cap", value: "10", description: "Streak bonus +2 per issue, capped here." },
       { key: "company_min_players", value: "3", description: "Minimum players for a company to appear in standings." },
       { key: "min_seconds_per_guess", value: "0.7", description: "Faster average cadence is flagged and unranked." },
-      { key: "require_verification_for_new_emails", value: "false", description: "true → every public claim must verify by magic link." }
+      { key: "require_verification_for_new_emails", value: "false", description: "true → every public claim must verify by magic link." },
+      { key: "timezone", value: "UTC", description: "Time zone used to decide when a scheduled issue's publication date has arrived." }
     ];
     const issueRow = (i) => ({ id: i.id, issue_number: i.number, title: i.title, publication_date: i.date, answer: i.answer, category: i.category, hint: i.hint, explanation: i.explanation, status: i.status, allow_reuse: false, newsletter_recipients: { 11: 3900, 12: 4050, 13: 4180, 14: 4250 }[i.number] || null });
     const usedBy = (w) => (D.ISSUES.find((i) => i.answer === w) || {}).number || null;

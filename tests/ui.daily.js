@@ -10,8 +10,9 @@ const URL=(process.env.BASE || "http://localhost:8080")+"/spark-word-daily.html"
   // ---- Day 1 (today, 2026-09-03) ----
   let ctx=await b.newContext({viewport:{width:1280,height:900}}); let errs=[]; let reqs=[];
   let p=await ctx.newPage(); p.on("pageerror",e=>errs.push(e.message)); p.on("console",m=>{if(m.type()==="error")errs.push(m.text())}); p.on("request",r=>{ if(!r.url().includes("localhost")) reqs.push(r.url()); });
+  await p.clock.install({ time: new Date("2026-09-03T10:00:00") });   // Day 1 of the schedule
   await p.goto(URL,{waitUntil:"networkidle"}); await wait(900);
-  console.log("\n▶ Day 1 — today");
+  console.log("\n▶ Day 1 — clock set to 2026-09-03");
   check(reqs.length===0,"no external requests");
   const line=await p.$eval("#swIssueLine",e=>e.innerText); check(/DAY 001/.test(line)&&/SEPTEMBER 3, 2026/i.test(line),"header → "+line.replace(/\n/g," "));
   check(/Daily edition/i.test(await p.$eval("#swPreviewBanner",e=>e.innerText)),"daily banner");

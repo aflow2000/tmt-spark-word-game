@@ -97,7 +97,8 @@ async function context(browser, opts) {
   check(arc.mode === "archive" && arc.score === 0, "archive game scores 0 and is unranked");
   await ctx.close();
 
-  console.log("\n▶ Guest on a phone: fail in six, then claim a NEW email");
+  console.log("\n▶ Guest on a phone: fail in six, then create an account (accounts mode)");
+  await fetch(BASE + "/__auth/reset", { method: "POST" }); await fetch(BASE + "/__auth/config", { method: "POST", headers: { "content-type": "application/json" }, body: '{"autoconfirm":true}' });
   ({ ctx, errors } = await context(browser, { ...devices["iPhone 13"], viewport: { width: 390, height: 844 } }));
   page = await ctx.newPage();
   await page.goto(BASE + "/index.html#spark-word", { waitUntil: "networkidle" }); await wait(800);
@@ -107,15 +108,15 @@ async function context(browser, opts) {
   await wait(1200);
   const fail = await page.$eval("#swResultSheet", (el) => el.innerText);
   check(/the spark got away/i.test(fail) && fail.includes("FIBER"), "fail state reveals the word");
-  check(fail.includes("Claim my rank"), "guest offered to claim");
-  await page.tap("#swResultSheet [data-sw-claim]"); await wait(500);
-  await page.fill("#swcEmail", "kai.nguyen@example-anthropic.com"); await page.fill("#swcFirst", "Kai"); await page.fill("#swcLast", "Nguyen"); await page.fill("#swcCompany", "Anthropic");
-  await page.tap("#swClaimForm button[type=submit]"); await wait(1500);
-  check((await page.$eval("#swIdentity", (el) => el.innerText)).includes("Kai N."), "profile created and recognised → " + (await page.$eval("#swIdentity", (el) => el.innerText)).split("\n")[0]);
+  check(fail.includes("Create account"), "guest offered an account");
+  await page.tap("#swResultSheet [data-sw-auth='signup']"); await wait(500);
+  await page.fill("#swaEmail", "kai.nguyen@example-anthropic.com"); await page.fill("#swaPass", "sparkword-2026"); await page.fill("#swaFirst", "Kai"); await page.fill("#swaLast", "Nguyen"); await page.fill("#swaCompany", "Anthropic");
+  await page.tap("#swAuthForm button[type=submit]"); await wait(2000);
+  check((await page.$eval("#swIdentity", (el) => el.innerText)).includes("Kai N."), "account created and recognised → " + (await page.$eval("#swIdentity", (el) => el.innerText)).split("\n")[0]);
   const tok = await page.evaluate(() => localStorage.getItem("sw_token"));
   check(tok && tok.length > 30, "token stored for future visits");
 
-  console.log("\n▶ Guest claiming an EXISTING subscriber email → verification required (no token leaked)");
+  console.log("\n▶ RPC contract: claiming an EXISTING subscriber email without auth → verification required (no token leaked)");
   await page.evaluate(() => { localStorage.removeItem("sw_token"); localStorage.removeItem("sw_guest_id"); });
   await page.goto(BASE + "/index.html?issue=13#spark-word", { waitUntil: "networkidle" }); await wait(900);
   await page.keyboard.type("power"); await page.keyboard.press("Enter"); await wait(2400);

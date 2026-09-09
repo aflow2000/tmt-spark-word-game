@@ -214,14 +214,9 @@ end $$;
 -- Scheduled issues whose publication_date has arrived → activate (call from a cron / pg_cron)
 create or replace function admin_activate_due_issues() returns int
 language plpgsql security definer set search_path = public as $$
-declare n int := 0; r record;
 begin
-  for r in select id from issues where status = 'scheduled' and publication_date <= current_date order by issue_number loop
-    update issues set status = 'active' where id = r.id;
-    n := n + 1;
-  end loop;
-  if n > 0 then perform sw_recompute_subscriber_stats(id) from subscribers where games_played > 0; end if;
-  return n;
+  perform sw_require_admin();
+  return sw_activate_due();   -- the same lazy activation every player read already performs
 end $$;
 
 -- Word bank search helper (dashboard)

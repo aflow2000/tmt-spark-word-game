@@ -20,6 +20,33 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 -- ------------------------------------------------------------
+-- Scheduled issues go live by themselves on their publication date.
+-- Called at the start of every player-facing read, so no cron job is
+-- needed: the first visitor after midnight (in `timezone`) flips the
+-- issue. Activating archives the previous active issue (issue guard).
+-- ------------------------------------------------------------
+create or replace function sw_today() returns date
+language sql stable security definer set search_path = public as $$
+  select (now() at time zone sw_setting('timezone', 'UTC'))::date;
+$$;
+
+create or replace function sw_activate_due() returns int
+language plpgsql security definer set search_path = public as $$
+declare v_active int; v_n int := 0; r record; v_today date := sw_today();
+begin
+  if not exists (select 1 from issues where status = 'scheduled' and publication_date <= v_today) then return 0; end if;
+  select issue_number into v_active from issues where status = 'active';
+  -- an overdue issue numbered below the current one can never go live: archive it quietly
+  update issues set status = 'archived' where status = 'scheduled' and publication_date <= v_today and issue_number < coalesce(v_active, 0);
+  for r in select id from issues where status = 'scheduled' and publication_date <= v_today and issue_number > coalesce(v_active, 0) order by issue_number loop
+    update issues set status = 'active' where id = r.id;   -- each activation archives the previous active issue
+    v_n := v_n + 1;
+  end loop;
+  if v_n > 0 then perform sw_recompute_subscriber_stats(id) from subscribers where games_played > 0; end if;
+  return v_n;
+end $$;
+
+-- ------------------------------------------------------------
 -- Core evaluation (two-pass: exact matches first, then leftovers)
 -- Handles repeated letters correctly, e.g. answer STEEL / guess EERIE
 -- → E(present) E(present→absent after count) R(absent) I(absent) E(absent)
@@ -392,9 +419,11 @@ declare
   s subscribers%rowtype;
   i issues%rowtype;
   g games%rowtype;
+  nxt issues%rowtype;
   v_active int;
   v_latest int;
 begin
+  perform sw_activate_due();
   s := sw_resolve_subscriber(p_token);
   if s.id is not null then
     update subscribers set last_seen_at = now() where id = s.id;
@@ -402,6 +431,7 @@ begin
 
   select issue_number into v_active from issues where status = 'active';
   select max(issue_number) into v_latest from issues where status in ('active','archived');
+  select * into nxt from issues where status = 'scheduled' and issue_number > coalesce(v_active, v_latest, 0) order by issue_number limit 1;
 
   if p_issue_number is not null then
     select * into i from issues where issue_number = p_issue_number;
@@ -426,6 +456,8 @@ begin
     'issue', sw_issue_public_json(i),
     'active_issue_number', v_active,
     'latest_issue_number', v_latest,
+    'next_issue', case when nxt.id is not null then jsonb_build_object('number', nxt.issue_number, 'date', nxt.publication_date) else null end,
+    'today', sw_today(),
     'player', case when s.id is not null then sw_player_json(s) else null end,
     'game', case when g.id is not null then sw_game_json(g) else null end,
     'new_game_mode', sw_new_game_mode(i, s.id, case when s.id is null then p_guest_id end),
@@ -664,24 +696,29 @@ create or replace function sw_verified_link(
 language plpgsql security definer set search_path = public as $$
 declare
   v_email citext := lower(coalesce(auth.jwt() ->> 'email', ''));
+  v_meta jsonb := coalesce(auth.jwt() -> 'user_metadata', '{}'::jsonb);
+  v_first text := coalesce(nullif(trim(p_first_name),''), nullif(trim(v_meta ->> 'first_name'),''));
+  v_last  text := coalesce(nullif(trim(p_last_name),''),  nullif(trim(v_meta ->> 'last_name'),''));
+  v_co    text := coalesce(nullif(trim(p_company),''),    nullif(trim(v_meta ->> 'company'),''));
+  v_vis   text := coalesce(p_visibility, nullif(v_meta ->> 'visibility',''));
   s subscribers%rowtype;
   g games%rowtype;
 begin
   if v_email = '' then return jsonb_build_object('ok', false, 'error', 'not_authenticated'); end if;
+  if v_vis is not null and v_vis not in ('first_last_initial','full_name','anonymous') then v_vis := null; end if;
   select * into s from subscribers where email = v_email;
   if s.id is null then
     insert into subscribers (email, first_name, last_name, company, leaderboard_visibility, newsletter_subscriber, source, email_verified, auth_user_id)
-      values (v_email, nullif(trim(p_first_name),''), nullif(trim(p_last_name),''), nullif(trim(p_company),''),
-              coalesce(p_visibility,'first_last_initial')::sw_visibility, false, 'verified_claim', true, auth.uid())
+      values (v_email, v_first, v_last, v_co, coalesce(v_vis,'first_last_initial')::sw_visibility, false, 'verified_claim', true, auth.uid())
       returning * into s;
   else
     update subscribers set
       email_verified = true,
       auth_user_id = coalesce(auth_user_id, auth.uid()),
-      first_name = coalesce(first_name, nullif(trim(p_first_name),'')),
-      last_name  = coalesce(last_name,  nullif(trim(p_last_name),'')),
-      company    = coalesce(company,    nullif(trim(p_company),'')),
-      leaderboard_visibility = coalesce(p_visibility::sw_visibility, leaderboard_visibility)
+      first_name = coalesce(first_name, v_first),
+      last_name  = coalesce(last_name,  v_last),
+      company    = coalesce(company,    v_co),
+      leaderboard_visibility = coalesce(v_vis::sw_visibility, leaderboard_visibility)
      where id = s.id returning * into s;
   end if;
   if p_guest_id is not null then perform sw_attach_guest_games(s.id, p_guest_id); end if;
@@ -743,6 +780,7 @@ create or replace function sw_archive(p_token text default null, p_guest_id text
 language plpgsql security definer set search_path = public as $$
 declare s subscribers%rowtype;
 begin
+  perform sw_activate_due();
   s := sw_resolve_subscriber(p_token);
   return jsonb_build_object('ok', true, 'issues', (
     select coalesce(jsonb_agg(jsonb_build_object(

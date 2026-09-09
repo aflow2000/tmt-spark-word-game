@@ -287,4 +287,54 @@ begin
 end $$;
 reset role;
 
+-- ---------- accounts: sign-up metadata fallback (confirm on another device) ----------
+insert into auth.users (id, email) values ('33333333-3333-3333-3333-333333333333', 'new.player@example.com') on conflict do nothing;
+select set_config('request.jwt.claims', '{"sub":"33333333-3333-3333-3333-333333333333","email":"new.player@example.com","role":"authenticated","user_metadata":{"first_name":"Nova","last_name":"Quinn","company":"Equinix","visibility":"full_name"}}', false);
+set role authenticated;
+do $$
+declare r jsonb;
+begin
+  r := sw_verified_link(null, null, null, null, null, null);        -- no pending profile on this device
+  assert (r->>'ok')::boolean and r->>'status' = 'linked', 'linked from metadata';
+  assert r->'player'->>'name' = 'Nova Quinn' and r->'player'->>'company' = 'Equinix', 'name and company from auth user metadata';
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', false);
+do $$ begin
+  assert (select first_name || ' ' || last_name || ' ' || company from subscribers where email = 'new.player@example.com') = 'Nova Quinn Equinix', 'profile filled from auth user metadata';
+  assert (select leaderboard_visibility::text from subscribers where email = 'new.player@example.com') = 'full_name', 'visibility from metadata';
+  assert (select email_verified from subscribers where email = 'new.player@example.com'), 'verified';
+  raise notice 'accounts tests passed';
+end $$;
+
+-- ---------- fortnightly cadence: scheduled issues go live on their date, no cron ----------
+insert into issues (issue_number, title, publication_date, answer, category, hint, explanation, status)
+  values (16, null, current_date - 1, 'MODEM', 'Telecommunications', 'The box from your provider.', 'A modem converts a line signal into data.', 'scheduled'),
+         (17, null, current_date + 13, 'PIXEL', 'Media', 'A dot of colour.', 'The smallest element of a digital image.', 'scheduled');
+set role anon;
+do $$
+declare r jsonb;
+begin
+  r := sw_bootstrap(null, null, 'guest-cadence');
+  assert (r->>'active_issue_number')::int = 16, 'first read after the date activates issue 16 (got ' || (r->>'active_issue_number') || ')';
+  assert r->'next_issue'->>'number' = '17', 'next issue announced';
+  assert (r->'next_issue'->>'date')::date = current_date + 13, 'next issue date';
+  assert (r->>'today')::date = current_date, 'today exposed';
+  -- a game on the new issue is official
+  r := sw_submit_guess(16, 'modem', null, 'guest-cadence');
+  assert r->>'mode' = 'official' and r->>'status' = 'won', 'new issue playable as official';
+end $$;
+reset role;
+do $$ begin
+  assert (select status from issues where issue_number = 16) = 'active', 'issue 16 active';
+  assert (select status from issues where issue_number = 14) = 'archived', 'previous active issue archived';
+  assert (select status from issues where issue_number = 15) = 'scheduled', 'future-dated issue untouched';
+  assert (select count(*) from issues where status = 'active') = 1, 'exactly one active';
+  raise notice 'cadence tests passed';
+end $$;
+-- timezone setting is honoured by sw_today()
+update sw_settings set value = 'Pacific/Kiritimati' where key = 'timezone';
+do $$ begin assert sw_today() = (now() at time zone 'Pacific/Kiritimati')::date, 'timezone setting'; end $$;
+update sw_settings set value = 'UTC' where key = 'timezone';
+
 select 'ALL SQL TESTS PASSED' as result;

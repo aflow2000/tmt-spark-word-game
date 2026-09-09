@@ -43,6 +43,14 @@
 .sw-identity button{background:none;border:1px solid var(--line);color:var(--celadon);border-radius:999px;padding:5px 11px;font-size:11.5px;font-weight:600}
 .sw-identity button:hover{border-color:var(--celadon);color:var(--ink)}
 .sw-identity.guest{border-style:dashed}
+.sw-identity .sw-id-actions{display:inline-flex;gap:6px}
+.sw-identity .sw-id-actions button.primary{background:var(--spark);border-color:var(--spark);color:#0B111E}
+.sw-identity .sw-id-actions button.primary:hover{filter:brightness(1.08);color:#0B111E}
+.sw-issue-line .sw-next{color:var(--dim);letter-spacing:.14em}
+.sw-issue-line .sw-next em{font-style:normal;color:var(--wheat)}
+.sw-link{background:none;border:0;padding:0;color:var(--celadon);font:inherit;font-size:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.sw-link:hover{color:var(--ink)}
+.sw-sheet label small{font-family:var(--sans);letter-spacing:0;text-transform:none}
 
 /* ---------- stage: board + hint + keyboard ---------- */
 .sw-stage{max-width:560px;margin:0 auto;padding:0 20px 40px;--sw-tile:clamp(44px,min(12.4vw,8.4vh),58px);--sw-gap:6px}

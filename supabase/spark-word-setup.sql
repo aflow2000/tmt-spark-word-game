@@ -4,16 +4,17 @@
 
 -- Paste this whole file into Supabase → SQL Editor → New query → Run.
 -- It creates the schema, game functions, leaderboards, admin functions,
--- row-level security, the settings, the word bank, the dictionary and
--- the sample Issue 014. Safe to re-run (idempotent where it matters).
+-- row-level security, the settings, the word bank, the guess dictionary and
+-- the fortnightly issue calendar (100 words, one every 14 days, going live
+-- by themselves on their dates). Safe to re-run.
 --
 -- Afterwards:
---   1. Supabase → Authentication → Users → add your admin user (email + password)
---   2. run:  insert into admins (email) values ('you@turnerandtownsend.com');
---   3. run:  update sw_settings set value = 'https://YOUR-APP.vercel.app/spark-word.html' where key = 'site_url';
---            update sw_settings set value = 'query' where key = 'url_style';
---      (or use the Settings tab in spark-word-admin.html)
--- Sample players/games for testing live in spark-word-test-data.sql.
+--   1. Authentication → Providers → Email: keep it on ("Confirm email" on or off, your choice)
+--   2. Authentication → URL Configuration: Site URL = your site, Redirect URLs = https://YOUR-SITE/**
+--   3. Authentication → Users → Add user (auto-confirm) for the editor, then run:
+--        insert into admins (user_id, email, role) select id, email, 'owner' from auth.users where email = 'you@turnerandtownsend.com';
+--   4. Change the site address below if it is not https://tmt-spark-word-game.vercel.app
+-- Sample players/games for a DEMO project live in spark-word-test-data.sql (not for production).
 
 -- ============================================================
 -- FILE: supabase/migrations/001_schema.sql
@@ -379,6 +380,33 @@ create or replace function sw_resolve_subscriber(p_token text) returns subscribe
 language sql stable security definer set search_path = public as $$
   select s.* from subscribers s where p_token is not null and s.subscriber_token = p_token limit 1;
 $$;
+
+-- ------------------------------------------------------------
+-- Scheduled issues go live by themselves on their publication date.
+-- Called at the start of every player-facing read, so no cron job is
+-- needed: the first visitor after midnight (in `timezone`) flips the
+-- issue. Activating archives the previous active issue (issue guard).
+-- ------------------------------------------------------------
+create or replace function sw_today() returns date
+language sql stable security definer set search_path = public as $$
+  select (now() at time zone sw_setting('timezone', 'UTC'))::date;
+$$;
+
+create or replace function sw_activate_due() returns int
+language plpgsql security definer set search_path = public as $$
+declare v_active int; v_n int := 0; r record; v_today date := sw_today();
+begin
+  if not exists (select 1 from issues where status = 'scheduled' and publication_date <= v_today) then return 0; end if;
+  select issue_number into v_active from issues where status = 'active';
+  -- an overdue issue numbered below the current one can never go live: archive it quietly
+  update issues set status = 'archived' where status = 'scheduled' and publication_date <= v_today and issue_number < coalesce(v_active, 0);
+  for r in select id from issues where status = 'scheduled' and publication_date <= v_today and issue_number > coalesce(v_active, 0) order by issue_number loop
+    update issues set status = 'active' where id = r.id;   -- each activation archives the previous active issue
+    v_n := v_n + 1;
+  end loop;
+  if v_n > 0 then perform sw_recompute_subscriber_stats(id) from subscribers where games_played > 0; end if;
+  return v_n;
+end $$;
 
 -- ------------------------------------------------------------
 -- Core evaluation (two-pass: exact matches first, then leftovers)
@@ -753,9 +781,11 @@ declare
   s subscribers%rowtype;
   i issues%rowtype;
   g games%rowtype;
+  nxt issues%rowtype;
   v_active int;
   v_latest int;
 begin
+  perform sw_activate_due();
   s := sw_resolve_subscriber(p_token);
   if s.id is not null then
     update subscribers set last_seen_at = now() where id = s.id;
@@ -763,6 +793,7 @@ begin
 
   select issue_number into v_active from issues where status = 'active';
   select max(issue_number) into v_latest from issues where status in ('active','archived');
+  select * into nxt from issues where status = 'scheduled' and issue_number > coalesce(v_active, v_latest, 0) order by issue_number limit 1;
 
   if p_issue_number is not null then
     select * into i from issues where issue_number = p_issue_number;
@@ -787,6 +818,8 @@ begin
     'issue', sw_issue_public_json(i),
     'active_issue_number', v_active,
     'latest_issue_number', v_latest,
+    'next_issue', case when nxt.id is not null then jsonb_build_object('number', nxt.issue_number, 'date', nxt.publication_date) else null end,
+    'today', sw_today(),
     'player', case when s.id is not null then sw_player_json(s) else null end,
     'game', case when g.id is not null then sw_game_json(g) else null end,
     'new_game_mode', sw_new_game_mode(i, s.id, case when s.id is null then p_guest_id end),
@@ -1025,24 +1058,29 @@ create or replace function sw_verified_link(
 language plpgsql security definer set search_path = public as $$
 declare
   v_email citext := lower(coalesce(auth.jwt() ->> 'email', ''));
+  v_meta jsonb := coalesce(auth.jwt() -> 'user_metadata', '{}'::jsonb);
+  v_first text := coalesce(nullif(trim(p_first_name),''), nullif(trim(v_meta ->> 'first_name'),''));
+  v_last  text := coalesce(nullif(trim(p_last_name),''),  nullif(trim(v_meta ->> 'last_name'),''));
+  v_co    text := coalesce(nullif(trim(p_company),''),    nullif(trim(v_meta ->> 'company'),''));
+  v_vis   text := coalesce(p_visibility, nullif(v_meta ->> 'visibility',''));
   s subscribers%rowtype;
   g games%rowtype;
 begin
   if v_email = '' then return jsonb_build_object('ok', false, 'error', 'not_authenticated'); end if;
+  if v_vis is not null and v_vis not in ('first_last_initial','full_name','anonymous') then v_vis := null; end if;
   select * into s from subscribers where email = v_email;
   if s.id is null then
     insert into subscribers (email, first_name, last_name, company, leaderboard_visibility, newsletter_subscriber, source, email_verified, auth_user_id)
-      values (v_email, nullif(trim(p_first_name),''), nullif(trim(p_last_name),''), nullif(trim(p_company),''),
-              coalesce(p_visibility,'first_last_initial')::sw_visibility, false, 'verified_claim', true, auth.uid())
+      values (v_email, v_first, v_last, v_co, coalesce(v_vis,'first_last_initial')::sw_visibility, false, 'verified_claim', true, auth.uid())
       returning * into s;
   else
     update subscribers set
       email_verified = true,
       auth_user_id = coalesce(auth_user_id, auth.uid()),
-      first_name = coalesce(first_name, nullif(trim(p_first_name),'')),
-      last_name  = coalesce(last_name,  nullif(trim(p_last_name),'')),
-      company    = coalesce(company,    nullif(trim(p_company),'')),
-      leaderboard_visibility = coalesce(p_visibility::sw_visibility, leaderboard_visibility)
+      first_name = coalesce(first_name, v_first),
+      last_name  = coalesce(last_name,  v_last),
+      company    = coalesce(company,    v_co),
+      leaderboard_visibility = coalesce(v_vis::sw_visibility, leaderboard_visibility)
      where id = s.id returning * into s;
   end if;
   if p_guest_id is not null then perform sw_attach_guest_games(s.id, p_guest_id); end if;
@@ -1104,6 +1142,7 @@ create or replace function sw_archive(p_token text default null, p_guest_id text
 language plpgsql security definer set search_path = public as $$
 declare s subscribers%rowtype;
 begin
+  perform sw_activate_due();
   s := sw_resolve_subscriber(p_token);
   return jsonb_build_object('ok', true, 'issues', (
     select coalesce(jsonb_agg(jsonb_build_object(
@@ -1169,6 +1208,7 @@ declare
   v_top jsonb; v_me jsonb;
   mine games%rowtype;
 begin
+  perform sw_activate_due();
   s := sw_resolve_subscriber(p_token);
   if p_issue_number is null then
     select * into i from issues where status = 'active';
@@ -1320,6 +1360,7 @@ declare
   s subscribers%rowtype; i issues%rowtype; g games%rowtype;
   v_reveal boolean; v_total int; v_solved int; v_top jsonb; v_champ text;
 begin
+  perform sw_activate_due();
   s := sw_resolve_subscriber(p_token);
   if p_issue_number is not null then
     select * into i from issues where issue_number = p_issue_number and status in ('active','archived');
@@ -1596,14 +1637,9 @@ end $$;
 -- Scheduled issues whose publication_date has arrived → activate (call from a cron / pg_cron)
 create or replace function admin_activate_due_issues() returns int
 language plpgsql security definer set search_path = public as $$
-declare n int := 0; r record;
 begin
-  for r in select id from issues where status = 'scheduled' and publication_date <= current_date order by issue_number loop
-    update issues set status = 'active' where id = r.id;
-    n := n + 1;
-  end loop;
-  if n > 0 then perform sw_recompute_subscriber_stats(id) from subscribers where games_played > 0; end if;
-  return n;
+  perform sw_require_admin();
+  return sw_activate_due();   -- the same lazy activation every player read already performs
 end $$;
 
 -- Word bank search helper (dashboard)
@@ -1749,7 +1785,8 @@ insert into sw_settings (key, value, description) values
   ('streak_bonus_cap',                      '10',    'Streak bonus is +2 points per consecutive issue, capped at this many issues.'),
   ('company_min_players',                   '3',     'Minimum eligible players for a company to appear in Company Standings.'),
   ('min_seconds_per_guess',                 '0.7',   'Games completed faster than this average cadence are flagged and excluded from ranking.'),
-  ('require_verification_for_new_emails',   'false','true → every public-link claim must verify by magic link (existing subscriber emails always must).')
+  ('require_verification_for_new_emails',   'false','true → every public-link claim must verify by magic link (existing subscriber emails always must).'),
+  ('timezone',                              'UTC',   'Time zone used to decide when a scheduled issue''s publication date has arrived (e.g. Europe/London, America/New_York).')
 on conflict (key) do update set value = excluded.value, description = excluded.description;
 
 
@@ -3039,43 +3076,436 @@ on conflict do nothing;
 
 
 -- ============================================================
--- FILE: supabase/seed/040_issues.sql
+-- FILE: supabase/schedule/fortnightly.sql
 -- ============================================================
 -- ============================================================
--- SPARK WORD — seed 040 · Issues
---
--- Mirrors the editions already on the TMT Spark site:
---   011 Concrete & Code (Jun 2026)   → STEEL   archived
---   012 Signal & Stream (Jul 2026)   → RADIO   archived
---   013 The Power Issue (Aug 2026)   → POWER   archived
---   014 The AI Infrastructure Race   → FIBER   ACTIVE  ← sample issue
---   015 (Oct 2026)                   → CLOUD   scheduled
--- Insert order matters: activating an issue archives the previous one.
+-- SPARK WORD — fortnightly schedule · issues 015–114
+-- Generated by scripts/build-schedule-sql.js from assets/spark-word-daily-words.js
+-- One word every 14 days from 2026-09-08 (Issue 015) to 2030-06-25 (Issue 114).
+-- Issues go live by themselves on their date (sw_activate_due). Safe to re-run: existing issue numbers are left untouched.
 -- ============================================================
 
-insert into issues (issue_number, title, publication_date, answer, category, hint, explanation, status, newsletter_recipients) values
-(11, 'Concrete & Code', '2026-06-04', 'STEEL', 'Construction',
- 'The metal that frames data centers, fabs and towers — beams, columns, rebar — and the first line item tariffs move.',
- 'Steel is the structural backbone of data centers, fabs and towers. Its price, tariff exposure and lead times move construction cost more than almost any other material, which is why cost managers track steel indices as closely as interest rates.',
- 'archived', 3900),
-(12, 'Signal & Stream', '2026-07-02', 'RADIO', 'Telecommunications',
- 'The airwaves part of every mobile network — towers, antennas and the signal between them. AM, FM and 5G all use it.',
- 'Radio access networks — the towers, antennas and small cells you can see — are the most visible and expensive part of a mobile network. Private 5G brings the same radio technology inside ports, factories and campuses, which is why connectivity is starting to appear in leases the way power does.',
- 'archived', 4050),
-(13, 'The Power Issue', '2026-08-06', 'POWER', 'Energy & Power',
- 'Measured in megawatts and gigawatts — the one thing every new data center campus is short of. Plants make it, grids move it.',
- 'Electricity has become the binding constraint on AI growth. Racks that drew 5–10 kW are now specified at 100 kW and beyond, campuses are planned in gigawatts, and interconnection queues in major markets stretch past four years — so site selection is an energy question first and a real estate question second.',
- 'archived', 4180),
-(14, 'The AI Infrastructure Race', '2026-09-03', 'FIBER', 'Telecommunications',
- 'Strands of glass that carry data as pulses of light — the cable that connects a data center to the rest of the world.',
- 'Fiber carries enormous volumes of digital information using light and is fundamental to telecom networks, data centers and modern digital infrastructure. Long-haul and metro fiber routes are now being built along the corridors connecting AI data center clusters — connectivity is following compute, and fiber access is becoming a site-selection criterion alongside power.',
- 'active', 4250),
-(15, 'Where Compute Lives', '2026-10-01', 'CLOUD', 'Digital Infrastructure',
- 'Computing you rent by the hour from someone else''s data center — the business that made the hyperscalers giant.',
- 'Cloud computing is capacity delivered as a service from someone else''s data centers. Cloud demand built the hyperscale industry over the last decade; AI is now building its second wave, with the largest cloud providers signing multi-gigawatt power deals and leasing capacity years ahead of delivery.',
- 'scheduled', null)
-on conflict (issue_number) do update set
-  title = excluded.title, publication_date = excluded.publication_date, answer = excluded.answer,
-  category = excluded.category, hint = excluded.hint, explanation = excluded.explanation,
-  status = excluded.status, newsletter_recipients = excluded.newsletter_recipients;
+-- The answers join the word bank (so the dashboard's reuse guard and search know them);
+-- words already in the bank keep their definition and get the newer, easier hint.
+insert into word_bank (word, category, definition, hint, active) values
+  ($q$MODEL$q$, $q$AI & Compute$q$, $q$A model is the trained system at the heart of AI: billions of learned parameters that turn a question into an answer or an image. Every model has a physical footprint — the chips, power and buildings needed to train and run it.$q$, $q$The trained brain of any AI system — every chatbot is one of these underneath.
+It's also what you call someone walking a fashion runway.$q$, true),
+  ($q$TRAIN$q$, $q$AI & Compute$q$, $q$Training is the phase where a model learns from data, running racks of accelerators flat-out for weeks. It is the workload behind gigawatt campuses, liquid cooling and long-term power deals.$q$, $q$What an AI model does for weeks on thousands of chips before it can answer anything.
+Also something that runs on rails and stops at stations.$q$, true),
+  ($q$TOKEN$q$, $q$AI & Compute$q$, $q$A token is the unit of text a language model reads and produces — roughly three-quarters of a word. Tokens are the product of an AI factory, and every one of them costs electricity.$q$, $q$The small unit of text an AI reads and writes — chatbots are priced per million of these.
+Also a coin you drop into an arcade machine.$q$, true),
+  ($q$AGENT$q$, $q$AI & Compute$q$, $q$An agent is an AI system that can plan and take actions rather than only reply. Agents multiply inference demand and push AI into physical operations.$q$, $q$AI that doesn't just answer — it acts: booking, coding, running tasks on its own.
+Also what a spy, a travel rep and an estate rep are called.$q$, true),
+  ($q$LAYER$q$, $q$AI & Compute$q$, $q$A layer is one stage of a neural network; deep learning simply means many of them stacked. More layers means more parameters, more compute and more power.$q$, $q$Neural networks are stacked from dozens of these, one on top of another — that's the 'deep' in deep learning.
+A cake has several too.$q$, true),
+  ($q$QUERY$q$, $q$AI & Compute$q$, $q$A query is a request for information sent to a system — a database, a search engine or an AI model. Inference demand is measured in queries per second.$q$, $q$A question you send to a database, a search engine or a chatbot.
+Starts with Q, like 'question', and ends in Y.$q$, true),
+  ($q$BATCH$q$, $q$AI & Compute$q$, $q$Batching groups many requests so an accelerator processes them together, raising utilisation. Batch size is a key lever on the cost per token.$q$, $q$A group of requests processed together so an expensive chip stays busy.
+Bakers make cookies in one of these.$q$, true),
+  ($q$CACHE$q$, $q$AI & Compute$q$, $q$A cache is a small, fast store of recently used data kept close to the processor. Cache hits keep GPUs fed; misses are why memory bandwidth matters so much in AI.$q$, $q$Fast memory that keeps recently used data close so a chip doesn't have to fetch it again.
+Pronounced exactly like 'cash'.$q$, true),
+  ($q$ROBOT$q$, $q$AI & Compute$q$, $q$Robots are machines that sense and act in the physical world. Physical AI — humanoids and autonomous warehouse fleets — is the next big consumer of compute and data-centre capacity.$q$, $q$A machine that moves and works on its own — in factories, warehouses and now humanoid form.
+The word came from a 1920 Czech play.$q$, true),
+  ($q$INFER$q$, $q$AI & Compute$q$, $q$To infer is to run a trained model to get an answer. Inference is the day-to-day workload of AI — already larger than training for many operators — and the reason edge and regional data centres are being built.$q$, $q$What a trained model does every time it answers a prompt — the verb behind 'inference'.
+It also means to work something out from clues, like a detective.$q$, true),
+  ($q$EPOCH$q$, $q$AI & Compute$q$, $q$An epoch is one complete pass through a training dataset. Training runs are measured in epochs, GPU-hours and, increasingly, megawatt-hours.$q$, $q$One full pass through the training data — models are trained for many of these.
+Also a long span of geological time, like the Ice Age.$q$, true),
+  ($q$FLOPS$q$, $q$AI & Compute$q$, $q$FLOPS — floating-point operations per second — is the standard measure of compute. Frontier training runs are planned in exaflops, and FLOPS per watt decides how big the power bill gets.$q$, $q$How chip speed is counted: floating-point operations per second, in the plural.
+Also beach sandals, or a film that bombs at the box office.$q$, true),
+  ($q$CORES$q$, $q$AI & Compute$q$, $q$Cores are the independent processing units inside a chip. GPUs win at AI because they carry thousands of small cores that work in parallel.$q$, $q$The individual processing units inside a chip — a modern GPU packs thousands of them.
+Also the middle part of an apple, in the plural.$q$, true),
+  ($q$LOGIC$q$, $q$AI & Compute$q$, $q$Logic chips process data, as opposed to memory chips that store it. Leading-edge logic — 3 nm and below — is made in only a handful of fabs worldwide.$q$, $q$The kind of chip that computes rather than remembers — CPUs and GPUs are this type, memory chips are not.
+Also the study of correct reasoning.$q$, true),
+  ($q$QUBIT$q$, $q$AI & Compute$q$, $q$A qubit is the quantum computer's equivalent of a bit. Quantum machines need near-absolute-zero cooling and heavy shielding — a new kind of critical facility.$q$, $q$The basic unit of a quantum computer — it can be 0 and 1 at the same time.
+Squash 'quantum' and 'bit' together.$q$, true),
+  ($q$RACKS$q$, $q$Data Centers$q$, $q$Racks are the standard 19-inch frames that hold servers. Rack density — the power drawn per rack — has jumped from 5 kW to 100 kW and beyond with AI.$q$, $q$The tall metal frames servers are bolted into, row after row across a data hall.
+Also where you hang coats or park bikes.$q$, true),
+  ($q$AISLE$q$, $q$Data Centers$q$, $q$Hot-aisle/cold-aisle containment separates exhaust air from intake air so cooling works efficiently. Aisle layout is the first thing a data-centre designer draws.$q$, $q$The walkway between two rows of server racks — data centres keep hot ones apart from cold ones.
+Supermarkets and aeroplanes have them too.$q$, true),
+  ($q$CAGES$q$, $q$Data Centers$q$, $q$In a colocation facility, cages are secured mesh enclosures around a tenant's racks. Cage space is leased by the kilowatt.$q$, $q$Locked wire-mesh enclosures that fence off one customer's racks from another's inside a shared data hall.
+Zoos and bird-keepers use them.$q$, true),
+  ($q$HALLS$q$, $q$Data Centers$q$, $q$Data halls are the white-space rooms that hold the racks. A hyperscale building may hold several, each of 5–10 MW.$q$, $q$The big rooms full of servers inside a data centre — 'data ____'.
+Concerts and town meetings happen in them.$q$, true),
+  ($q$PUMPS$q$, $q$Data Centers$q$, $q$Pumps circulate water or coolant through chillers, pipes and cold plates. Liquid cooling makes pump capacity and redundancy critical infrastructure.$q$, $q$The machines that push coolant around a liquid-cooled data centre.
+Also a style of women's shoe, and what you fill your car up at.$q$, true),
+  ($q$FLUID$q$, $q$Data Centers$q$, $q$Cooling fluid — treated water, glycol or dielectric oil — removes heat that air no longer can. Immersion cooling submerges whole servers in it.$q$, $q$The liquid that carries heat away from AI chips — some servers are dunked straight into it.
+Anything that flows and takes the shape of its container is this.$q$, true),
+  ($q$TRAYS$q$, $q$Data Centers$q$, $q$Cable trays route power and fibre above or below racks. Tray capacity is often the surprise constraint when a hall is upgraded for AI.$q$, $q$The flat metal channels that carry bundles of cables overhead through a data hall.
+Cafeterias hand you one at the counter.$q$, true),
+  ($q$LOADS$q$, $q$Data Centers$q$, $q$IT load is the power drawn by the servers themselves; total facility load adds cooling and losses. The ratio between them is the PUE.$q$, $q$How engineers describe the electrical demand a data centre puts on the grid — 'critical IT ____'.
+Also what a lorry carries, and a lot of something.$q$, true),
+  ($q$WATER$q$, $q$Data Centers$q$, $q$Many data centres cool with water, either through evaporation or closed loops. Water-use effectiveness (WUE) is now reported alongside PUE.$q$, $q$What evaporative cooling towers consume by the million litres — the resource data centres are most criticised for using.
+You drink it every day.$q$, true),
+  ($q$BLADE$q$, $q$Data Centers$q$, $q$Blade servers pack computing into slim modules sharing power and cooling in one chassis — the original high-density design.$q$, $q$A thin server that slides into a shared chassis, many side by side.
+Also the sharp part of a knife, or one arm of a fan.$q$, true),
+  ($q$TIERS$q$, $q$Data Centers$q$, $q$The Uptime Institute's Tier I–IV classification grades a facility's redundancy and fault tolerance; Tier III is the common enterprise standard.$q$, $q$The 1-to-4 rating that says how much backup a data centre has built in.
+A wedding cake is stacked in these.$q$, true),
+  ($q$HYPER$q$, $q$Data Centers$q$, $q$Hyperscale describes the very large facilities run by the cloud giants — hundreds of megawatts on one campus, built to a repeatable template.$q$, $q$The prefix for the giant cloud campuses — '____scale' data centres.
+Also describes an over-excited child.$q$, true),
+  ($q$DENSE$q$, $q$Data Centers$q$, $q$Density is power per rack or per square metre. AI has pushed designs from 10 kW to 100+ kW per rack, forcing liquid cooling and stronger floors.$q$, $q$How engineers describe a rack that draws a lot of power in a small space — 'high-____ compute'.
+The opposite of sparse; also a word for thick fog.$q$, true),
+  ($q$REUSE$q$, $q$Data Centers$q$, $q$Heat reuse sends a data centre's exhaust heat into district heating networks or greenhouses, turning a waste stream into a community benefit.$q$, $q$What Nordic data centres do with their waste heat — pipe it into people's homes.
+To use something again.$q$, true),
+  ($q$SHELL$q$, $q$Data Centers$q$, $q$A powered shell is a data-centre building with structure and utility power but no fit-out. Leasing a shell shortens time-to-market for tenants.$q$, $q$The empty building — walls, roof, slab — handed over before any racks or cooling go in: a 'powered ____'.
+Snails, eggs and peanuts have one.$q$, true),
+  ($q$WAFER$q$, $q$Semiconductors$q$, $q$A wafer is the 300 mm silicon disc that chips are fabricated on. Fabs are measured in wafer starts per month.$q$, $q$The thin, round slice of silicon that hundreds of chips are printed on.
+Also a very thin, crisp biscuit.$q$, true),
+  ($q$CHIPS$q$, $q$Semiconductors$q$, $q$Chips, or integrated circuits, are the product of the semiconductor industry. A single fab producing advanced chips costs $20 billion and more.$q$, $q$The slivers of silicon at the heart of every phone, car and server — the whole industry is named after them.
+Also what the British call fries.$q$, true),
+  ($q$YIELD$q$, $q$Semiconductors$q$, $q$Yield is the percentage of good die per wafer. Raising yield on a new process node is what turns a fab from a cost into a business.$q$, $q$The share of chips on a wafer that actually work — the number every fab obsesses over.
+Also what a road sign tells you to do at a junction.$q$, true),
+  ($q$INGOT$q$, $q$Semiconductors$q$, $q$A silicon ingot is grown as one giant crystal, then sawn into wafers. Ingot growth is the very first step in the chip supply chain.$q$, $q$The long single crystal of silicon that gets sliced into wafers.
+Gold is cast into bars called this.$q$, true),
+  ($q$MASKS$q$, $q$Semiconductors$q$, $q$Photomasks carry each layer of a chip's design; light shone through them prints the circuit. A mask set for an advanced chip runs into the tens of millions.$q$, $q$The stencils used in lithography to project a chip's pattern onto silicon — a set can cost millions.
+Surgeons and superheroes wear one.$q$, true),
+  ($q$DIODE$q$, $q$Semiconductors$q$, $q$A diode conducts electricity in one direction. LEDs and laser diodes are diodes that emit light — the basis of fibre-optic transmitters.$q$, $q$The simplest semiconductor part — it lets current flow one way only.
+It's the 'D' in LED.$q$, true),
+  ($q$LASER$q$, $q$Semiconductors$q$, $q$Lasers drive fibre-optic communications and extreme-ultraviolet lithography alike. An EUV machine fires a laser at tin droplets 50,000 times a second.$q$, $q$The focused beam of light that fibre networks transmit with and chip factories pattern with.
+Sci-fi weapons and cat toys use one.$q$, true),
+  ($q$OXIDE$q$, $q$Semiconductors$q$, $q$Silicon dioxide is the insulator that made the modern transistor possible. The 'O' in MOSFET, and in CMOS, stands for oxide.$q$, $q$The insulating layer grown on silicon inside a transistor — the 'O' in MOSFET and CMOS.
+Rust is one made of iron.$q$, true),
+  ($q$LITHO$q$, $q$Semiconductors$q$, $q$Litho is fab shorthand for lithography. EUV litho tools cost over $150 million each and are the bottleneck of advanced chipmaking.$q$, $q$Fab slang for lithography — the step that prints chip patterns with light, using ASML's machines.
+Just chop 'lithography' down to its first five letters.$q$, true),
+  ($q$FLASH$q$, $q$Semiconductors$q$, $q$Flash memory stores data without power and underpins SSDs and phones. NAND flash fabs are among the largest cleanrooms on earth.$q$, $q$The memory chip inside SSDs, phones and USB sticks — it keeps data with the power off.
+Also a camera's burst of light, and a DC superhero.$q$, true),
+  ($q$BOARD$q$, $q$Semiconductors$q$, $q$A printed circuit board connects chips into a working system. Board design and assembly is the step between the fab and the server.$q$, $q$The green printed-circuit ____ that chips are soldered onto.
+Also what a teacher writes on, and what surfers ride.$q$, true),
+  ($q$MICRO$q$, $q$Semiconductors$q$, $q$Micro- named the scale of chip features for decades; today's transistors are measured in nanometres, a thousand times smaller still.$q$, $q$The prefix for tiny — '____chip', '____processor'.
+The opposite of macro.$q$, true),
+  ($q$CLEAN$q$, $q$Semiconductors$q$, $q$A cleanroom controls dust to a few particles per cubic metre. Cleanroom fit-out is the most expensive construction per square metre in the world.$q$, $q$The kind of room chips are made in — thousands of times purer than a hospital theatre: a '____room'.
+The opposite of dirty.$q$, true),
+  ($q$GATES$q$, $q$Semiconductors$q$, $q$The gate controls whether a transistor conducts. Gate length is the feature that 'process nodes' were originally named after.$q$, $q$The part of a transistor that switches it on and off — and the logic ____ (AND, OR, NOT) chips are built from.
+Also Microsoft's co-founder, Bill.$q$, true),
+  ($q$FIBER$q$, $q$Telecommunications$q$, $q$Fibre-optic cable carries data as light with enormous capacity and low loss. It is the backbone of telecom networks and of the corridors linking AI campuses.$q$, $q$The hair-thin strands of glass that carry the internet as pulses of light, from the seabed to your street.
+'Full-____ broadband', spelt the American way.$q$, true),
+  ($q$TOWER$q$, $q$Telecommunications$q$, $q$Cell towers host the antennas of mobile networks. Tower companies lease space to multiple carriers — one of the steadiest cash flows in infrastructure.$q$, $q$The tall steel mast your phone signal comes from, with antennas near the top.
+Also what Eiffel built in Paris.$q$, true),
+  ($q$RADIO$q$, $q$Telecommunications$q$, $q$Radio access networks — towers, antennas and small cells — are the most visible and expensive part of a mobile network.$q$, $q$The wireless part of every mobile network — the '____ access network'.
+Also the thing you listen to music and news on in the car.$q$, true),
+  ($q$CABLE$q$, $q$Telecommunications$q$, $q$Cables — copper, coaxial or fibre — are the physical layer of connectivity. Submarine cables carry over 95% of intercontinental data.$q$, $q$The wire that carries broadband, TV or power — undersea versions link whole continents.
+Also what a ski lift or a suspension bridge hangs from.$q$, true),
+  ($q$OPTIC$q$, $q$Telecommunications$q$, $q$Optic means light-based. Optical networks and optical transceivers are what move data between data centres at terabits per second.$q$, $q$The adjective for anything that works with light: 'fibre-____'.
+Also the nerve that connects your eye to your brain.$q$, true),
+  ($q$BANDS$q$, $q$Telecommunications$q$, $q$Spectrum bands are the frequency ranges licensed to mobile operators. Mid-band spectrum is the sweet spot for 5G coverage and capacity.$q$, $q$The slices of radio spectrum carriers pay billions for at auction — low, mid and high.
+Also groups of musicians.$q$, true),
+  ($q$CELLS$q$, $q$Telecommunications$q$, $q$A mobile network is a patchwork of cells, each served by a base station. Small cells are what dense 5G needs in cities.$q$, $q$The small areas a mobile network is divided into — it's why Americans say '____ phone'.
+Also the building blocks of your body, and where prisoners sleep.$q$, true),
+  ($q$RELAY$q$, $q$Telecommunications$q$, $q$Relays receive, boost and retransmit signals. Microwave relay chains and satellite relays extend networks where fibre can't reach.$q$, $q$A station that receives a signal and passes it on further — satellites and microwave links do it.
+Also a running race with a baton.$q$, true),
+  ($q$ORBIT$q$, $q$Telecommunications$q$, $q$Low-Earth-orbit satellites at around 550 km deliver low-latency broadband and are now a serious rural connectivity option.$q$, $q$The path a satellite follows around the Earth — low-Earth-____ constellations beam broadband from space.
+Planets follow one around the sun.$q$, true),
+  ($q$MODEM$q$, $q$Telecommunications$q$, $q$A modem converts a line signal into digital data. Fibre 'modems' (ONTs) and 5G fixed-wireless modems are today's versions.$q$, $q$The box from your internet provider that turns the phone, cable or fibre line into a connection.
+Short for modulator-demodulator — and it reads the same backwards, nearly.$q$, true),
+  ($q$POLES$q$, $q$Telecommunications$q$, $q$Utility poles carry aerial fibre and power. Pole access and 'make-ready' work are a major cost of rural broadband builds.$q$, $q$The wooden or steel posts that carry phone and fibre lines along a street.
+Also the far north and south of the planet.$q$, true),
+  ($q$TRUNK$q$, $q$Telecommunications$q$, $q$Trunk lines carry aggregated traffic between major nodes. Long-haul trunk fibre is being rebuilt along AI data-centre corridors.$q$, $q$The high-capacity main line between exchanges or cities — the big pipe smaller ones feed into.
+Also an elephant's nose and a tree's stem.$q$, true),
+  ($q$MASTS$q$, $q$Telecommunications$q$, $q$Masts hold antennas above the clutter. Planning permission for masts is a persistent bottleneck in mobile rollouts.$q$, $q$The British word for the tall poles carrying mobile antennas.
+Also where a ship's sails hang.$q$, true),
+  ($q$PHONE$q$, $q$Telecommunications$q$, $q$The phone is the endpoint of the whole telecom stack. Smartphones drove the mobile-data explosion that 5G was built to carry.$q$, $q$The device in your pocket that started as a way to talk and became a computer.
+Alexander Graham Bell's invention.$q$, true),
+  ($q$WAVES$q$, $q$Telecommunications$q$, $q$Radio waves carry wireless signals; millimetre waves at 24 GHz and above give 5G its fastest speeds but travel only short distances.$q$, $q$Radio signals travel as these — described by their length or frequency.
+The sea makes them, and so does a friendly hand.$q$, true),
+  ($q$TELCO$q$, $q$Telecommunications$q$, $q$Telco is shorthand for a telecom operator. Telcos are now major data-centre and fibre investors as well as network owners.$q$, $q$Industry slang for a telephone company — BT, AT&T, Verizon.
+Shorten 'telecommunications company' to five letters.$q$, true),
+  ($q$MEDIA$q$, $q$Media$q$, $q$Media is the industry of content — news, entertainment, sport and social. Its delivery now runs almost entirely over telecom networks and data centres.$q$, $q$TV, film, news, streaming and social — the 'M' in TMT.
+The plural of 'medium'.$q$, true),
+  ($q$VIDEO$q$, $q$Media$q$, $q$Video is over 80% of internet traffic. Streaming, video calls and now AI-generated video drive network and storage demand.$q$, $q$Moving pictures — the biggest single thing flowing through the internet, from streaming to calls.
+It's what YouTube is made of.$q$, true),
+  ($q$AUDIO$q$, $q$Media$q$, $q$Audio is the sound half of media. Podcasts and music streaming created new rights, royalty and delivery businesses.$q$, $q$Sound as a signal — podcasts, music streaming and the speaker in your phone.
+Latin for 'I hear'.$q$, true),
+  ($q$PIXEL$q$, $q$Media$q$, $q$A pixel is the smallest element of a digital image. Higher pixel counts mean more data to shoot, store, stream and render.$q$, $q$The tiny dot of colour that screens and photos are made of — 4K means eight million of them.
+Picture + element, squashed together.$q$, true),
+  ($q$FRAME$q$, $q$Media$q$, $q$A frame is a single image in a sequence; frame rate is how many pass per second. Frames per second is also how games and renderers are judged.$q$, $q$One still picture in a video — film runs at 24 of these per second.
+Also what surrounds a painting or holds your glasses.$q$, true),
+  ($q$BRAND$q$, $q$Media$q$, $q$A brand is a name people recognise and trust. Media companies sell attention to brands — that's the advertising business.$q$, $q$A company's name, logo and reputation — the thing advertising exists to build.
+Also a mark burned onto cattle.$q$, true),
+  ($q$PRESS$q$, $q$Media$q$, $q$The press is the news-media industry. Print's decline and digital subscriptions have reshaped newsrooms and the buildings they need.$q$, $q$Newspapers and journalists collectively — 'the ____'.
+Also what you do to a button or a doorbell.$q$, true),
+  ($q$STORY$q$, $q$Media$q$, $q$Stories are the unit of content — from a news report to a social-media post. Storytelling is what all of media's technology exists to deliver.$q$, $q$What every journalist files, every film tells and every Instagram user posts for 24 hours.
+A tale, in a word.$q$, true),
+  ($q$MUSIC$q$, $q$Media$q$, $q$Music was the first media industry remade by streaming. Rights, royalties and recommendation algorithms now drive its economics.$q$, $q$Streaming turned this industry from CDs into subscriptions — Spotify's whole business.
+Songs, in a word.$q$, true),
+  ($q$GAMES$q$, $q$Media$q$, $q$Video games are the largest entertainment sector by revenue. Cloud gaming and live-service titles keep data centres busy around the clock.$q$, $q$The biggest entertainment business on the planet — bigger than film and music combined — on consoles, PCs and phones.
+You play them.$q$, true),
+  ($q$VIRAL$q$, $q$Media$q$, $q$Viral content spreads through sharing rather than broadcasting. Virality is the growth engine of social platforms.$q$, $q$What a video is when it spreads across the internet in hours.
+Sounds like a nasty infection.$q$, true),
+  ($q$CODEC$q$, $q$Media$q$, $q$A codec compresses and decompresses audio or video. Better codecs cut streaming bandwidth roughly in half every decade.$q$, $q$The software that squeezes video small enough to stream and unpacks it on your screen — H.264 and AV1 are examples.
+Coder + decoder, squashed together.$q$, true),
+  ($q$SOUND$q$, $q$Media$q$, $q$Sound design, mixing and spatial audio are a growing share of media production budgets and studio space.$q$, $q$What speakers make and microphones capture — the other half of 'picture and ____'.
+A noise, in a word.$q$, true),
+  ($q$REELS$q$, $q$Media$q$, $q$Reels are short-form vertical video. Short-form is now the dominant format for attention and advertising on social platforms.$q$, $q$Short vertical videos on Instagram and Facebook — TikTok's rival format.
+Also what film used to be wound onto, and what anglers wind.$q$, true),
+  ($q$FILMS$q$, $q$Media$q$, $q$Films remain the prestige product of media. Production has become a real-estate business: sound stages are leased like data halls.$q$, $q$Movies — what studios make and cinemas show.
+The British word for them; also thin layers of something.$q$, true),
+  ($q$FEEDS$q$, $q$Media$q$, $q$A feed is the algorithmically ranked stream of content on a platform. Ranking those feeds is one of the biggest inference workloads in the world.$q$, $q$The endless scroll of posts on social apps — an algorithm decides what goes in yours.
+Also what a farmer does to the animals.$q$, true),
+  ($q$CLOUD$q$, $q$Digital Infrastructure$q$, $q$Cloud computing is capacity rented from someone else's data centres. Cloud demand built the hyperscale industry; AI is building its second wave.$q$, $q$Where your files live when they're not on your device — AWS, Azure and Google sell it.
+Also the white fluffy thing in the sky.$q$, true),
+  ($q$NODES$q$, $q$Digital Infrastructure$q$, $q$A node is any device on a network. In AI clusters, a node is typically one server with eight GPUs.$q$, $q$The points a network is made of — every server, switch and router is one.
+Also the bumps on a plant stem where leaves grow.$q$, true),
+  ($q$ROUTE$q$, $q$Digital Infrastructure$q$, $q$Routing decides which path packets take. Route diversity — two physically separate fibre paths — is a standard data-centre requirement.$q$, $q$The path data takes across the internet, chosen hop by hop by routers.
+Also what a bus or a delivery driver follows.$q$, true),
+  ($q$LINKS$q$, $q$Digital Infrastructure$q$, $q$Links are the connections between nodes. Link speed inside AI clusters has jumped from 100 Gbps to 800 Gbps in a few years.$q$, $q$The connections between network devices — fibre, copper or wireless.
+Also what a chain is made of, and what you click on a web page.$q$, true),
+  ($q$PORTS$q$, $q$Digital Infrastructure$q$, $q$Ports are the physical or logical connection points on network gear. Port count and speed define a switch's capacity.$q$, $q$The sockets on a switch or server that cables plug into — a big switch has 64 of them.
+Ships dock at one too.$q$, true),
+  ($q$STACK$q$, $q$Digital Infrastructure$q$, $q$The stack is the set of hardware and software layers that make an application work — from silicon and cooling up to the app itself.$q$, $q$The layered set of technologies a system is built from — a 'full-____ developer' knows all of it.
+Also a pile of pancakes.$q$, true),
+  ($q$SPINE$q$, $q$Digital Infrastructure$q$, $q$Spine switches connect every leaf switch in a data-centre fabric so any server can reach any other in two hops.$q$, $q$The top layer of switches in a modern data-centre network — a '____-and-leaf' design.
+Also your backbone.$q$, true),
+  ($q$PATCH$q$, $q$Digital Infrastructure$q$, $q$A patch is an update that fixes bugs or vulnerabilities. Patch cables and patch panels are the physical equivalent in a data hall.$q$, $q$A small software fix pushed out to close a security hole — Microsoft names a Tuesday after it.
+Also a square of fabric sewn over a hole in your jeans.$q$, true),
+  ($q$HOSTS$q$, $q$Digital Infrastructure$q$, $q$A host is a machine that runs services on a network. Hosting companies were the first colocation tenants.$q$, $q$The servers that run websites and apps — 'web ____ing' is renting them.
+Also the people who throw a party.$q$, true),
+  ($q$PROXY$q$, $q$Digital Infrastructure$q$, $q$A proxy forwards requests between clients and servers — used for security, caching and privacy. Reverse proxies sit in front of most large websites.$q$, $q$A server that sits between you and the internet and forwards requests on your behalf.
+Also someone who votes for you at a meeting you can't attend.$q$, true),
+  ($q$CYBER$q$, $q$Digital Infrastructure$q$, $q$Cyber refers to the digital domain, especially its security. Cyber resilience is now a board-level requirement for critical infrastructure.$q$, $q$The prefix for anything to do with computer security or attacks: '____security', '____attack'.
+It comes from 'cybernetics'.$q$, true),
+  ($q$BYTES$q$, $q$Digital Infrastructure$q$, $q$A byte is eight bits, the unit of storage. Global data is measured in zettabytes — a trillion gigabytes.$q$, $q$The basic units of digital storage — eight bits each, and a gigabyte is a billion of them.
+Sounds exactly like what a dog does.$q$, true),
+  ($q$TWINS$q$, $q$Digital Infrastructure$q$, $q$A digital twin is a live virtual model of a physical asset. Data-centre operators use twins to simulate cooling and capacity before changing anything.$q$, $q$'Digital ____': a live virtual copy of a building or machine that mirrors the real one.
+Also two babies born together.$q$, true),
+  ($q$SHARD$q$, $q$Digital Infrastructure$q$, $q$Sharding splits a database horizontally across machines so it can scale. Every large platform shards its users.$q$, $q$One slice of a database split across many servers — huge apps break their data into these.
+Also a broken piece of glass, and a London skyscraper.$q$, true),
+  ($q$QUEUE$q$, $q$Digital Infrastructure$q$, $q$A queue holds work until a system is ready for it. Message queues decouple modern applications; grid interconnection queues delay data centres by years.$q$, $q$The line that tasks or messages wait in before a system processes them.
+Also the British word for a line of people — five letters, four of them vowels.$q$, true),
+  ($q$LOGIN$q$, $q$Digital Infrastructure$q$, $q$Login is the front door of every digital service. Identity and access management is the first layer of cyber security.$q$, $q$The username-and-password step that gets you into an account.
+Log + in.$q$, true),
+  ($q$POWER$q$, $q$Energy & Power$q$, $q$Power has become the binding constraint on AI growth. Campuses are planned in gigawatts and grid queues stretch past four years.$q$, $q$Electricity — the one thing every new data centre is short of, measured in megawatts.
+Also what a superhero has.$q$, true),
+  ($q$WATTS$q$, $q$Energy & Power$q$, $q$Watts measure power. Data-centre capacity is quoted in megawatts of IT load — the number every deal is priced on.$q$, $q$The units electricity is measured in — a light bulb uses 10, an AI rack uses 100,000.
+Named after a Scottish engineer called James.$q$, true),
+  ($q$VOLTS$q$, $q$Energy & Power$q$, $q$Voltage is electrical pressure. Higher-voltage distribution (48 V, 800 V DC) is how designers cut losses in dense AI racks.$q$, $q$The measure of electrical pressure — 230 in a UK socket, and data centres now feed racks at 800.
+Named after an Italian called Alessandro.$q$, true),
+  ($q$SOLAR$q$, $q$Energy & Power$q$, $q$Solar is the fastest-growing source of new power. Hyperscalers sign gigawatt solar deals to match their data-centre demand.$q$, $q$Power from panels that turn sunlight into electricity — the cheapest new generation on earth.
+Relating to the sun.$q$, true),
+  ($q$GRIDS$q$, $q$Energy & Power$q$, $q$Grids move power from generators to users. Grid connection, not land, is now the gating item for data-centre sites.$q$, $q$The national networks of wires and substations that deliver electricity — data centres wait years to connect to them.
+Also the pattern on graph paper.$q$, true),
+  ($q$SURGE$q$, $q$Energy & Power$q$, $q$A surge is a sudden jump in demand or voltage. AI training loads swing by tens of megawatts in seconds — a new problem for grids.$q$, $q$A sudden spike in electrical demand or voltage — a protector guards your equipment from one.
+Also a sudden rush of a crowd or the sea.$q$, true),
+  ($q$METER$q$, $q$Energy & Power$q$, $q$Meters measure consumption. Sub-metering by rack and tenant is how colocation operators bill by the kilowatt-hour.$q$, $q$The box that measures how much electricity a building uses — smart ones report it live.
+Also 100 centimetres, spelt the American way.$q$, true),
+  ($q$JOULE$q$, $q$Energy & Power$q$, $q$A joule is the SI unit of energy. Energy per token — joules per inference — is becoming the efficiency metric of AI.$q$, $q$The basic unit of energy — a watt is one of these per second.
+Named after an English physicist called James; sounds like 'jewel'.$q$, true)
+on conflict (word) do update set hint = excluded.hint;
 
+insert into issues (issue_number, title, publication_date, answer, category, hint, explanation, status) values
+  (15, null, '2026-09-08', $q$MODEL$q$, $q$AI & Compute$q$, $q$The trained brain of any AI system — every chatbot is one of these underneath.
+It's also what you call someone walking a fashion runway.$q$, $q$A model is the trained system at the heart of AI: billions of learned parameters that turn a question into an answer or an image. Every model has a physical footprint — the chips, power and buildings needed to train and run it.$q$, 'scheduled'),
+  (16, null, '2026-09-22', $q$TRAIN$q$, $q$AI & Compute$q$, $q$What an AI model does for weeks on thousands of chips before it can answer anything.
+Also something that runs on rails and stops at stations.$q$, $q$Training is the phase where a model learns from data, running racks of accelerators flat-out for weeks. It is the workload behind gigawatt campuses, liquid cooling and long-term power deals.$q$, 'scheduled'),
+  (17, null, '2026-10-06', $q$TOKEN$q$, $q$AI & Compute$q$, $q$The small unit of text an AI reads and writes — chatbots are priced per million of these.
+Also a coin you drop into an arcade machine.$q$, $q$A token is the unit of text a language model reads and produces — roughly three-quarters of a word. Tokens are the product of an AI factory, and every one of them costs electricity.$q$, 'scheduled'),
+  (18, null, '2026-10-20', $q$AGENT$q$, $q$AI & Compute$q$, $q$AI that doesn't just answer — it acts: booking, coding, running tasks on its own.
+Also what a spy, a travel rep and an estate rep are called.$q$, $q$An agent is an AI system that can plan and take actions rather than only reply. Agents multiply inference demand and push AI into physical operations.$q$, 'scheduled'),
+  (19, null, '2026-11-03', $q$LAYER$q$, $q$AI & Compute$q$, $q$Neural networks are stacked from dozens of these, one on top of another — that's the 'deep' in deep learning.
+A cake has several too.$q$, $q$A layer is one stage of a neural network; deep learning simply means many of them stacked. More layers means more parameters, more compute and more power.$q$, 'scheduled'),
+  (20, null, '2026-11-17', $q$QUERY$q$, $q$AI & Compute$q$, $q$A question you send to a database, a search engine or a chatbot.
+Starts with Q, like 'question', and ends in Y.$q$, $q$A query is a request for information sent to a system — a database, a search engine or an AI model. Inference demand is measured in queries per second.$q$, 'scheduled'),
+  (21, null, '2026-12-01', $q$BATCH$q$, $q$AI & Compute$q$, $q$A group of requests processed together so an expensive chip stays busy.
+Bakers make cookies in one of these.$q$, $q$Batching groups many requests so an accelerator processes them together, raising utilisation. Batch size is a key lever on the cost per token.$q$, 'scheduled'),
+  (22, null, '2026-12-15', $q$CACHE$q$, $q$AI & Compute$q$, $q$Fast memory that keeps recently used data close so a chip doesn't have to fetch it again.
+Pronounced exactly like 'cash'.$q$, $q$A cache is a small, fast store of recently used data kept close to the processor. Cache hits keep GPUs fed; misses are why memory bandwidth matters so much in AI.$q$, 'scheduled'),
+  (23, null, '2026-12-29', $q$ROBOT$q$, $q$AI & Compute$q$, $q$A machine that moves and works on its own — in factories, warehouses and now humanoid form.
+The word came from a 1920 Czech play.$q$, $q$Robots are machines that sense and act in the physical world. Physical AI — humanoids and autonomous warehouse fleets — is the next big consumer of compute and data-centre capacity.$q$, 'scheduled'),
+  (24, null, '2027-01-12', $q$INFER$q$, $q$AI & Compute$q$, $q$What a trained model does every time it answers a prompt — the verb behind 'inference'.
+It also means to work something out from clues, like a detective.$q$, $q$To infer is to run a trained model to get an answer. Inference is the day-to-day workload of AI — already larger than training for many operators — and the reason edge and regional data centres are being built.$q$, 'scheduled'),
+  (25, null, '2027-01-26', $q$EPOCH$q$, $q$AI & Compute$q$, $q$One full pass through the training data — models are trained for many of these.
+Also a long span of geological time, like the Ice Age.$q$, $q$An epoch is one complete pass through a training dataset. Training runs are measured in epochs, GPU-hours and, increasingly, megawatt-hours.$q$, 'scheduled'),
+  (26, null, '2027-02-09', $q$FLOPS$q$, $q$AI & Compute$q$, $q$How chip speed is counted: floating-point operations per second, in the plural.
+Also beach sandals, or a film that bombs at the box office.$q$, $q$FLOPS — floating-point operations per second — is the standard measure of compute. Frontier training runs are planned in exaflops, and FLOPS per watt decides how big the power bill gets.$q$, 'scheduled'),
+  (27, null, '2027-02-23', $q$CORES$q$, $q$AI & Compute$q$, $q$The individual processing units inside a chip — a modern GPU packs thousands of them.
+Also the middle part of an apple, in the plural.$q$, $q$Cores are the independent processing units inside a chip. GPUs win at AI because they carry thousands of small cores that work in parallel.$q$, 'scheduled'),
+  (28, null, '2027-03-09', $q$LOGIC$q$, $q$AI & Compute$q$, $q$The kind of chip that computes rather than remembers — CPUs and GPUs are this type, memory chips are not.
+Also the study of correct reasoning.$q$, $q$Logic chips process data, as opposed to memory chips that store it. Leading-edge logic — 3 nm and below — is made in only a handful of fabs worldwide.$q$, 'scheduled'),
+  (29, null, '2027-03-23', $q$QUBIT$q$, $q$AI & Compute$q$, $q$The basic unit of a quantum computer — it can be 0 and 1 at the same time.
+Squash 'quantum' and 'bit' together.$q$, $q$A qubit is the quantum computer's equivalent of a bit. Quantum machines need near-absolute-zero cooling and heavy shielding — a new kind of critical facility.$q$, 'scheduled'),
+  (30, null, '2027-04-06', $q$RACKS$q$, $q$Data Centers$q$, $q$The tall metal frames servers are bolted into, row after row across a data hall.
+Also where you hang coats or park bikes.$q$, $q$Racks are the standard 19-inch frames that hold servers. Rack density — the power drawn per rack — has jumped from 5 kW to 100 kW and beyond with AI.$q$, 'scheduled'),
+  (31, null, '2027-04-20', $q$AISLE$q$, $q$Data Centers$q$, $q$The walkway between two rows of server racks — data centres keep hot ones apart from cold ones.
+Supermarkets and aeroplanes have them too.$q$, $q$Hot-aisle/cold-aisle containment separates exhaust air from intake air so cooling works efficiently. Aisle layout is the first thing a data-centre designer draws.$q$, 'scheduled'),
+  (32, null, '2027-05-04', $q$CAGES$q$, $q$Data Centers$q$, $q$Locked wire-mesh enclosures that fence off one customer's racks from another's inside a shared data hall.
+Zoos and bird-keepers use them.$q$, $q$In a colocation facility, cages are secured mesh enclosures around a tenant's racks. Cage space is leased by the kilowatt.$q$, 'scheduled'),
+  (33, null, '2027-05-18', $q$HALLS$q$, $q$Data Centers$q$, $q$The big rooms full of servers inside a data centre — 'data ____'.
+Concerts and town meetings happen in them.$q$, $q$Data halls are the white-space rooms that hold the racks. A hyperscale building may hold several, each of 5–10 MW.$q$, 'scheduled'),
+  (34, null, '2027-06-01', $q$PUMPS$q$, $q$Data Centers$q$, $q$The machines that push coolant around a liquid-cooled data centre.
+Also a style of women's shoe, and what you fill your car up at.$q$, $q$Pumps circulate water or coolant through chillers, pipes and cold plates. Liquid cooling makes pump capacity and redundancy critical infrastructure.$q$, 'scheduled'),
+  (35, null, '2027-06-15', $q$FLUID$q$, $q$Data Centers$q$, $q$The liquid that carries heat away from AI chips — some servers are dunked straight into it.
+Anything that flows and takes the shape of its container is this.$q$, $q$Cooling fluid — treated water, glycol or dielectric oil — removes heat that air no longer can. Immersion cooling submerges whole servers in it.$q$, 'scheduled'),
+  (36, null, '2027-06-29', $q$TRAYS$q$, $q$Data Centers$q$, $q$The flat metal channels that carry bundles of cables overhead through a data hall.
+Cafeterias hand you one at the counter.$q$, $q$Cable trays route power and fibre above or below racks. Tray capacity is often the surprise constraint when a hall is upgraded for AI.$q$, 'scheduled'),
+  (37, null, '2027-07-13', $q$LOADS$q$, $q$Data Centers$q$, $q$How engineers describe the electrical demand a data centre puts on the grid — 'critical IT ____'.
+Also what a lorry carries, and a lot of something.$q$, $q$IT load is the power drawn by the servers themselves; total facility load adds cooling and losses. The ratio between them is the PUE.$q$, 'scheduled'),
+  (38, null, '2027-07-27', $q$WATER$q$, $q$Data Centers$q$, $q$What evaporative cooling towers consume by the million litres — the resource data centres are most criticised for using.
+You drink it every day.$q$, $q$Many data centres cool with water, either through evaporation or closed loops. Water-use effectiveness (WUE) is now reported alongside PUE.$q$, 'scheduled'),
+  (39, null, '2027-08-10', $q$BLADE$q$, $q$Data Centers$q$, $q$A thin server that slides into a shared chassis, many side by side.
+Also the sharp part of a knife, or one arm of a fan.$q$, $q$Blade servers pack computing into slim modules sharing power and cooling in one chassis — the original high-density design.$q$, 'scheduled'),
+  (40, null, '2027-08-24', $q$TIERS$q$, $q$Data Centers$q$, $q$The 1-to-4 rating that says how much backup a data centre has built in.
+A wedding cake is stacked in these.$q$, $q$The Uptime Institute's Tier I–IV classification grades a facility's redundancy and fault tolerance; Tier III is the common enterprise standard.$q$, 'scheduled'),
+  (41, null, '2027-09-07', $q$HYPER$q$, $q$Data Centers$q$, $q$The prefix for the giant cloud campuses — '____scale' data centres.
+Also describes an over-excited child.$q$, $q$Hyperscale describes the very large facilities run by the cloud giants — hundreds of megawatts on one campus, built to a repeatable template.$q$, 'scheduled'),
+  (42, null, '2027-09-21', $q$DENSE$q$, $q$Data Centers$q$, $q$How engineers describe a rack that draws a lot of power in a small space — 'high-____ compute'.
+The opposite of sparse; also a word for thick fog.$q$, $q$Density is power per rack or per square metre. AI has pushed designs from 10 kW to 100+ kW per rack, forcing liquid cooling and stronger floors.$q$, 'scheduled'),
+  (43, null, '2027-10-05', $q$REUSE$q$, $q$Data Centers$q$, $q$What Nordic data centres do with their waste heat — pipe it into people's homes.
+To use something again.$q$, $q$Heat reuse sends a data centre's exhaust heat into district heating networks or greenhouses, turning a waste stream into a community benefit.$q$, 'scheduled'),
+  (44, null, '2027-10-19', $q$SHELL$q$, $q$Data Centers$q$, $q$The empty building — walls, roof, slab — handed over before any racks or cooling go in: a 'powered ____'.
+Snails, eggs and peanuts have one.$q$, $q$A powered shell is a data-centre building with structure and utility power but no fit-out. Leasing a shell shortens time-to-market for tenants.$q$, 'scheduled'),
+  (45, null, '2027-11-02', $q$WAFER$q$, $q$Semiconductors$q$, $q$The thin, round slice of silicon that hundreds of chips are printed on.
+Also a very thin, crisp biscuit.$q$, $q$A wafer is the 300 mm silicon disc that chips are fabricated on. Fabs are measured in wafer starts per month.$q$, 'scheduled'),
+  (46, null, '2027-11-16', $q$CHIPS$q$, $q$Semiconductors$q$, $q$The slivers of silicon at the heart of every phone, car and server — the whole industry is named after them.
+Also what the British call fries.$q$, $q$Chips, or integrated circuits, are the product of the semiconductor industry. A single fab producing advanced chips costs $20 billion and more.$q$, 'scheduled'),
+  (47, null, '2027-11-30', $q$YIELD$q$, $q$Semiconductors$q$, $q$The share of chips on a wafer that actually work — the number every fab obsesses over.
+Also what a road sign tells you to do at a junction.$q$, $q$Yield is the percentage of good die per wafer. Raising yield on a new process node is what turns a fab from a cost into a business.$q$, 'scheduled'),
+  (48, null, '2027-12-14', $q$INGOT$q$, $q$Semiconductors$q$, $q$The long single crystal of silicon that gets sliced into wafers.
+Gold is cast into bars called this.$q$, $q$A silicon ingot is grown as one giant crystal, then sawn into wafers. Ingot growth is the very first step in the chip supply chain.$q$, 'scheduled'),
+  (49, null, '2027-12-28', $q$MASKS$q$, $q$Semiconductors$q$, $q$The stencils used in lithography to project a chip's pattern onto silicon — a set can cost millions.
+Surgeons and superheroes wear one.$q$, $q$Photomasks carry each layer of a chip's design; light shone through them prints the circuit. A mask set for an advanced chip runs into the tens of millions.$q$, 'scheduled'),
+  (50, null, '2028-01-11', $q$DIODE$q$, $q$Semiconductors$q$, $q$The simplest semiconductor part — it lets current flow one way only.
+It's the 'D' in LED.$q$, $q$A diode conducts electricity in one direction. LEDs and laser diodes are diodes that emit light — the basis of fibre-optic transmitters.$q$, 'scheduled'),
+  (51, null, '2028-01-25', $q$LASER$q$, $q$Semiconductors$q$, $q$The focused beam of light that fibre networks transmit with and chip factories pattern with.
+Sci-fi weapons and cat toys use one.$q$, $q$Lasers drive fibre-optic communications and extreme-ultraviolet lithography alike. An EUV machine fires a laser at tin droplets 50,000 times a second.$q$, 'scheduled'),
+  (52, null, '2028-02-08', $q$OXIDE$q$, $q$Semiconductors$q$, $q$The insulating layer grown on silicon inside a transistor — the 'O' in MOSFET and CMOS.
+Rust is one made of iron.$q$, $q$Silicon dioxide is the insulator that made the modern transistor possible. The 'O' in MOSFET, and in CMOS, stands for oxide.$q$, 'scheduled'),
+  (53, null, '2028-02-22', $q$LITHO$q$, $q$Semiconductors$q$, $q$Fab slang for lithography — the step that prints chip patterns with light, using ASML's machines.
+Just chop 'lithography' down to its first five letters.$q$, $q$Litho is fab shorthand for lithography. EUV litho tools cost over $150 million each and are the bottleneck of advanced chipmaking.$q$, 'scheduled'),
+  (54, null, '2028-03-07', $q$FLASH$q$, $q$Semiconductors$q$, $q$The memory chip inside SSDs, phones and USB sticks — it keeps data with the power off.
+Also a camera's burst of light, and a DC superhero.$q$, $q$Flash memory stores data without power and underpins SSDs and phones. NAND flash fabs are among the largest cleanrooms on earth.$q$, 'scheduled'),
+  (55, null, '2028-03-21', $q$BOARD$q$, $q$Semiconductors$q$, $q$The green printed-circuit ____ that chips are soldered onto.
+Also what a teacher writes on, and what surfers ride.$q$, $q$A printed circuit board connects chips into a working system. Board design and assembly is the step between the fab and the server.$q$, 'scheduled'),
+  (56, null, '2028-04-04', $q$MICRO$q$, $q$Semiconductors$q$, $q$The prefix for tiny — '____chip', '____processor'.
+The opposite of macro.$q$, $q$Micro- named the scale of chip features for decades; today's transistors are measured in nanometres, a thousand times smaller still.$q$, 'scheduled'),
+  (57, null, '2028-04-18', $q$CLEAN$q$, $q$Semiconductors$q$, $q$The kind of room chips are made in — thousands of times purer than a hospital theatre: a '____room'.
+The opposite of dirty.$q$, $q$A cleanroom controls dust to a few particles per cubic metre. Cleanroom fit-out is the most expensive construction per square metre in the world.$q$, 'scheduled'),
+  (58, null, '2028-05-02', $q$GATES$q$, $q$Semiconductors$q$, $q$The part of a transistor that switches it on and off — and the logic ____ (AND, OR, NOT) chips are built from.
+Also Microsoft's co-founder, Bill.$q$, $q$The gate controls whether a transistor conducts. Gate length is the feature that 'process nodes' were originally named after.$q$, 'scheduled'),
+  (59, null, '2028-05-16', $q$FIBER$q$, $q$Telecommunications$q$, $q$The hair-thin strands of glass that carry the internet as pulses of light, from the seabed to your street.
+'Full-____ broadband', spelt the American way.$q$, $q$Fibre-optic cable carries data as light with enormous capacity and low loss. It is the backbone of telecom networks and of the corridors linking AI campuses.$q$, 'scheduled'),
+  (60, null, '2028-05-30', $q$TOWER$q$, $q$Telecommunications$q$, $q$The tall steel mast your phone signal comes from, with antennas near the top.
+Also what Eiffel built in Paris.$q$, $q$Cell towers host the antennas of mobile networks. Tower companies lease space to multiple carriers — one of the steadiest cash flows in infrastructure.$q$, 'scheduled'),
+  (61, null, '2028-06-13', $q$RADIO$q$, $q$Telecommunications$q$, $q$The wireless part of every mobile network — the '____ access network'.
+Also the thing you listen to music and news on in the car.$q$, $q$Radio access networks — towers, antennas and small cells — are the most visible and expensive part of a mobile network.$q$, 'scheduled'),
+  (62, null, '2028-06-27', $q$CABLE$q$, $q$Telecommunications$q$, $q$The wire that carries broadband, TV or power — undersea versions link whole continents.
+Also what a ski lift or a suspension bridge hangs from.$q$, $q$Cables — copper, coaxial or fibre — are the physical layer of connectivity. Submarine cables carry over 95% of intercontinental data.$q$, 'scheduled'),
+  (63, null, '2028-07-11', $q$OPTIC$q$, $q$Telecommunications$q$, $q$The adjective for anything that works with light: 'fibre-____'.
+Also the nerve that connects your eye to your brain.$q$, $q$Optic means light-based. Optical networks and optical transceivers are what move data between data centres at terabits per second.$q$, 'scheduled'),
+  (64, null, '2028-07-25', $q$BANDS$q$, $q$Telecommunications$q$, $q$The slices of radio spectrum carriers pay billions for at auction — low, mid and high.
+Also groups of musicians.$q$, $q$Spectrum bands are the frequency ranges licensed to mobile operators. Mid-band spectrum is the sweet spot for 5G coverage and capacity.$q$, 'scheduled'),
+  (65, null, '2028-08-08', $q$CELLS$q$, $q$Telecommunications$q$, $q$The small areas a mobile network is divided into — it's why Americans say '____ phone'.
+Also the building blocks of your body, and where prisoners sleep.$q$, $q$A mobile network is a patchwork of cells, each served by a base station. Small cells are what dense 5G needs in cities.$q$, 'scheduled'),
+  (66, null, '2028-08-22', $q$RELAY$q$, $q$Telecommunications$q$, $q$A station that receives a signal and passes it on further — satellites and microwave links do it.
+Also a running race with a baton.$q$, $q$Relays receive, boost and retransmit signals. Microwave relay chains and satellite relays extend networks where fibre can't reach.$q$, 'scheduled'),
+  (67, null, '2028-09-05', $q$ORBIT$q$, $q$Telecommunications$q$, $q$The path a satellite follows around the Earth — low-Earth-____ constellations beam broadband from space.
+Planets follow one around the sun.$q$, $q$Low-Earth-orbit satellites at around 550 km deliver low-latency broadband and are now a serious rural connectivity option.$q$, 'scheduled'),
+  (68, null, '2028-09-19', $q$MODEM$q$, $q$Telecommunications$q$, $q$The box from your internet provider that turns the phone, cable or fibre line into a connection.
+Short for modulator-demodulator — and it reads the same backwards, nearly.$q$, $q$A modem converts a line signal into digital data. Fibre 'modems' (ONTs) and 5G fixed-wireless modems are today's versions.$q$, 'scheduled'),
+  (69, null, '2028-10-03', $q$POLES$q$, $q$Telecommunications$q$, $q$The wooden or steel posts that carry phone and fibre lines along a street.
+Also the far north and south of the planet.$q$, $q$Utility poles carry aerial fibre and power. Pole access and 'make-ready' work are a major cost of rural broadband builds.$q$, 'scheduled'),
+  (70, null, '2028-10-17', $q$TRUNK$q$, $q$Telecommunications$q$, $q$The high-capacity main line between exchanges or cities — the big pipe smaller ones feed into.
+Also an elephant's nose and a tree's stem.$q$, $q$Trunk lines carry aggregated traffic between major nodes. Long-haul trunk fibre is being rebuilt along AI data-centre corridors.$q$, 'scheduled'),
+  (71, null, '2028-10-31', $q$MASTS$q$, $q$Telecommunications$q$, $q$The British word for the tall poles carrying mobile antennas.
+Also where a ship's sails hang.$q$, $q$Masts hold antennas above the clutter. Planning permission for masts is a persistent bottleneck in mobile rollouts.$q$, 'scheduled'),
+  (72, null, '2028-11-14', $q$PHONE$q$, $q$Telecommunications$q$, $q$The device in your pocket that started as a way to talk and became a computer.
+Alexander Graham Bell's invention.$q$, $q$The phone is the endpoint of the whole telecom stack. Smartphones drove the mobile-data explosion that 5G was built to carry.$q$, 'scheduled'),
+  (73, null, '2028-11-28', $q$WAVES$q$, $q$Telecommunications$q$, $q$Radio signals travel as these — described by their length or frequency.
+The sea makes them, and so does a friendly hand.$q$, $q$Radio waves carry wireless signals; millimetre waves at 24 GHz and above give 5G its fastest speeds but travel only short distances.$q$, 'scheduled'),
+  (74, null, '2028-12-12', $q$TELCO$q$, $q$Telecommunications$q$, $q$Industry slang for a telephone company — BT, AT&T, Verizon.
+Shorten 'telecommunications company' to five letters.$q$, $q$Telco is shorthand for a telecom operator. Telcos are now major data-centre and fibre investors as well as network owners.$q$, 'scheduled'),
+  (75, null, '2028-12-26', $q$MEDIA$q$, $q$Media$q$, $q$TV, film, news, streaming and social — the 'M' in TMT.
+The plural of 'medium'.$q$, $q$Media is the industry of content — news, entertainment, sport and social. Its delivery now runs almost entirely over telecom networks and data centres.$q$, 'scheduled'),
+  (76, null, '2029-01-09', $q$VIDEO$q$, $q$Media$q$, $q$Moving pictures — the biggest single thing flowing through the internet, from streaming to calls.
+It's what YouTube is made of.$q$, $q$Video is over 80% of internet traffic. Streaming, video calls and now AI-generated video drive network and storage demand.$q$, 'scheduled'),
+  (77, null, '2029-01-23', $q$AUDIO$q$, $q$Media$q$, $q$Sound as a signal — podcasts, music streaming and the speaker in your phone.
+Latin for 'I hear'.$q$, $q$Audio is the sound half of media. Podcasts and music streaming created new rights, royalty and delivery businesses.$q$, 'scheduled'),
+  (78, null, '2029-02-06', $q$PIXEL$q$, $q$Media$q$, $q$The tiny dot of colour that screens and photos are made of — 4K means eight million of them.
+Picture + element, squashed together.$q$, $q$A pixel is the smallest element of a digital image. Higher pixel counts mean more data to shoot, store, stream and render.$q$, 'scheduled'),
+  (79, null, '2029-02-20', $q$FRAME$q$, $q$Media$q$, $q$One still picture in a video — film runs at 24 of these per second.
+Also what surrounds a painting or holds your glasses.$q$, $q$A frame is a single image in a sequence; frame rate is how many pass per second. Frames per second is also how games and renderers are judged.$q$, 'scheduled'),
+  (80, null, '2029-03-06', $q$BRAND$q$, $q$Media$q$, $q$A company's name, logo and reputation — the thing advertising exists to build.
+Also a mark burned onto cattle.$q$, $q$A brand is a name people recognise and trust. Media companies sell attention to brands — that's the advertising business.$q$, 'scheduled'),
+  (81, null, '2029-03-20', $q$PRESS$q$, $q$Media$q$, $q$Newspapers and journalists collectively — 'the ____'.
+Also what you do to a button or a doorbell.$q$, $q$The press is the news-media industry. Print's decline and digital subscriptions have reshaped newsrooms and the buildings they need.$q$, 'scheduled'),
+  (82, null, '2029-04-03', $q$STORY$q$, $q$Media$q$, $q$What every journalist files, every film tells and every Instagram user posts for 24 hours.
+A tale, in a word.$q$, $q$Stories are the unit of content — from a news report to a social-media post. Storytelling is what all of media's technology exists to deliver.$q$, 'scheduled'),
+  (83, null, '2029-04-17', $q$MUSIC$q$, $q$Media$q$, $q$Streaming turned this industry from CDs into subscriptions — Spotify's whole business.
+Songs, in a word.$q$, $q$Music was the first media industry remade by streaming. Rights, royalties and recommendation algorithms now drive its economics.$q$, 'scheduled'),
+  (84, null, '2029-05-01', $q$GAMES$q$, $q$Media$q$, $q$The biggest entertainment business on the planet — bigger than film and music combined — on consoles, PCs and phones.
+You play them.$q$, $q$Video games are the largest entertainment sector by revenue. Cloud gaming and live-service titles keep data centres busy around the clock.$q$, 'scheduled'),
+  (85, null, '2029-05-15', $q$VIRAL$q$, $q$Media$q$, $q$What a video is when it spreads across the internet in hours.
+Sounds like a nasty infection.$q$, $q$Viral content spreads through sharing rather than broadcasting. Virality is the growth engine of social platforms.$q$, 'scheduled'),
+  (86, null, '2029-05-29', $q$CODEC$q$, $q$Media$q$, $q$The software that squeezes video small enough to stream and unpacks it on your screen — H.264 and AV1 are examples.
+Coder + decoder, squashed together.$q$, $q$A codec compresses and decompresses audio or video. Better codecs cut streaming bandwidth roughly in half every decade.$q$, 'scheduled'),
+  (87, null, '2029-06-12', $q$SOUND$q$, $q$Media$q$, $q$What speakers make and microphones capture — the other half of 'picture and ____'.
+A noise, in a word.$q$, $q$Sound design, mixing and spatial audio are a growing share of media production budgets and studio space.$q$, 'scheduled'),
+  (88, null, '2029-06-26', $q$REELS$q$, $q$Media$q$, $q$Short vertical videos on Instagram and Facebook — TikTok's rival format.
+Also what film used to be wound onto, and what anglers wind.$q$, $q$Reels are short-form vertical video. Short-form is now the dominant format for attention and advertising on social platforms.$q$, 'scheduled'),
+  (89, null, '2029-07-10', $q$FILMS$q$, $q$Media$q$, $q$Movies — what studios make and cinemas show.
+The British word for them; also thin layers of something.$q$, $q$Films remain the prestige product of media. Production has become a real-estate business: sound stages are leased like data halls.$q$, 'scheduled'),
+  (90, null, '2029-07-24', $q$FEEDS$q$, $q$Media$q$, $q$The endless scroll of posts on social apps — an algorithm decides what goes in yours.
+Also what a farmer does to the animals.$q$, $q$A feed is the algorithmically ranked stream of content on a platform. Ranking those feeds is one of the biggest inference workloads in the world.$q$, 'scheduled'),
+  (91, null, '2029-08-07', $q$CLOUD$q$, $q$Digital Infrastructure$q$, $q$Where your files live when they're not on your device — AWS, Azure and Google sell it.
+Also the white fluffy thing in the sky.$q$, $q$Cloud computing is capacity rented from someone else's data centres. Cloud demand built the hyperscale industry; AI is building its second wave.$q$, 'scheduled'),
+  (92, null, '2029-08-21', $q$NODES$q$, $q$Digital Infrastructure$q$, $q$The points a network is made of — every server, switch and router is one.
+Also the bumps on a plant stem where leaves grow.$q$, $q$A node is any device on a network. In AI clusters, a node is typically one server with eight GPUs.$q$, 'scheduled'),
+  (93, null, '2029-09-04', $q$ROUTE$q$, $q$Digital Infrastructure$q$, $q$The path data takes across the internet, chosen hop by hop by routers.
+Also what a bus or a delivery driver follows.$q$, $q$Routing decides which path packets take. Route diversity — two physically separate fibre paths — is a standard data-centre requirement.$q$, 'scheduled'),
+  (94, null, '2029-09-18', $q$LINKS$q$, $q$Digital Infrastructure$q$, $q$The connections between network devices — fibre, copper or wireless.
+Also what a chain is made of, and what you click on a web page.$q$, $q$Links are the connections between nodes. Link speed inside AI clusters has jumped from 100 Gbps to 800 Gbps in a few years.$q$, 'scheduled'),
+  (95, null, '2029-10-02', $q$PORTS$q$, $q$Digital Infrastructure$q$, $q$The sockets on a switch or server that cables plug into — a big switch has 64 of them.
+Ships dock at one too.$q$, $q$Ports are the physical or logical connection points on network gear. Port count and speed define a switch's capacity.$q$, 'scheduled'),
+  (96, null, '2029-10-16', $q$STACK$q$, $q$Digital Infrastructure$q$, $q$The layered set of technologies a system is built from — a 'full-____ developer' knows all of it.
+Also a pile of pancakes.$q$, $q$The stack is the set of hardware and software layers that make an application work — from silicon and cooling up to the app itself.$q$, 'scheduled'),
+  (97, null, '2029-10-30', $q$SPINE$q$, $q$Digital Infrastructure$q$, $q$The top layer of switches in a modern data-centre network — a '____-and-leaf' design.
+Also your backbone.$q$, $q$Spine switches connect every leaf switch in a data-centre fabric so any server can reach any other in two hops.$q$, 'scheduled'),
+  (98, null, '2029-11-13', $q$PATCH$q$, $q$Digital Infrastructure$q$, $q$A small software fix pushed out to close a security hole — Microsoft names a Tuesday after it.
+Also a square of fabric sewn over a hole in your jeans.$q$, $q$A patch is an update that fixes bugs or vulnerabilities. Patch cables and patch panels are the physical equivalent in a data hall.$q$, 'scheduled'),
+  (99, null, '2029-11-27', $q$HOSTS$q$, $q$Digital Infrastructure$q$, $q$The servers that run websites and apps — 'web ____ing' is renting them.
+Also the people who throw a party.$q$, $q$A host is a machine that runs services on a network. Hosting companies were the first colocation tenants.$q$, 'scheduled'),
+  (100, null, '2029-12-11', $q$PROXY$q$, $q$Digital Infrastructure$q$, $q$A server that sits between you and the internet and forwards requests on your behalf.
+Also someone who votes for you at a meeting you can't attend.$q$, $q$A proxy forwards requests between clients and servers — used for security, caching and privacy. Reverse proxies sit in front of most large websites.$q$, 'scheduled'),
+  (101, null, '2029-12-25', $q$CYBER$q$, $q$Digital Infrastructure$q$, $q$The prefix for anything to do with computer security or attacks: '____security', '____attack'.
+It comes from 'cybernetics'.$q$, $q$Cyber refers to the digital domain, especially its security. Cyber resilience is now a board-level requirement for critical infrastructure.$q$, 'scheduled'),
+  (102, null, '2030-01-08', $q$BYTES$q$, $q$Digital Infrastructure$q$, $q$The basic units of digital storage — eight bits each, and a gigabyte is a billion of them.
+Sounds exactly like what a dog does.$q$, $q$A byte is eight bits, the unit of storage. Global data is measured in zettabytes — a trillion gigabytes.$q$, 'scheduled'),
+  (103, null, '2030-01-22', $q$TWINS$q$, $q$Digital Infrastructure$q$, $q$'Digital ____': a live virtual copy of a building or machine that mirrors the real one.
+Also two babies born together.$q$, $q$A digital twin is a live virtual model of a physical asset. Data-centre operators use twins to simulate cooling and capacity before changing anything.$q$, 'scheduled'),
+  (104, null, '2030-02-05', $q$SHARD$q$, $q$Digital Infrastructure$q$, $q$One slice of a database split across many servers — huge apps break their data into these.
+Also a broken piece of glass, and a London skyscraper.$q$, $q$Sharding splits a database horizontally across machines so it can scale. Every large platform shards its users.$q$, 'scheduled'),
+  (105, null, '2030-02-19', $q$QUEUE$q$, $q$Digital Infrastructure$q$, $q$The line that tasks or messages wait in before a system processes them.
+Also the British word for a line of people — five letters, four of them vowels.$q$, $q$A queue holds work until a system is ready for it. Message queues decouple modern applications; grid interconnection queues delay data centres by years.$q$, 'scheduled'),
+  (106, null, '2030-03-05', $q$LOGIN$q$, $q$Digital Infrastructure$q$, $q$The username-and-password step that gets you into an account.
+Log + in.$q$, $q$Login is the front door of every digital service. Identity and access management is the first layer of cyber security.$q$, 'scheduled'),
+  (107, null, '2030-03-19', $q$POWER$q$, $q$Energy & Power$q$, $q$Electricity — the one thing every new data centre is short of, measured in megawatts.
+Also what a superhero has.$q$, $q$Power has become the binding constraint on AI growth. Campuses are planned in gigawatts and grid queues stretch past four years.$q$, 'scheduled'),
+  (108, null, '2030-04-02', $q$WATTS$q$, $q$Energy & Power$q$, $q$The units electricity is measured in — a light bulb uses 10, an AI rack uses 100,000.
+Named after a Scottish engineer called James.$q$, $q$Watts measure power. Data-centre capacity is quoted in megawatts of IT load — the number every deal is priced on.$q$, 'scheduled'),
+  (109, null, '2030-04-16', $q$VOLTS$q$, $q$Energy & Power$q$, $q$The measure of electrical pressure — 230 in a UK socket, and data centres now feed racks at 800.
+Named after an Italian called Alessandro.$q$, $q$Voltage is electrical pressure. Higher-voltage distribution (48 V, 800 V DC) is how designers cut losses in dense AI racks.$q$, 'scheduled'),
+  (110, null, '2030-04-30', $q$SOLAR$q$, $q$Energy & Power$q$, $q$Power from panels that turn sunlight into electricity — the cheapest new generation on earth.
+Relating to the sun.$q$, $q$Solar is the fastest-growing source of new power. Hyperscalers sign gigawatt solar deals to match their data-centre demand.$q$, 'scheduled'),
+  (111, null, '2030-05-14', $q$GRIDS$q$, $q$Energy & Power$q$, $q$The national networks of wires and substations that deliver electricity — data centres wait years to connect to them.
+Also the pattern on graph paper.$q$, $q$Grids move power from generators to users. Grid connection, not land, is now the gating item for data-centre sites.$q$, 'scheduled'),
+  (112, null, '2030-05-28', $q$SURGE$q$, $q$Energy & Power$q$, $q$A sudden spike in electrical demand or voltage — a protector guards your equipment from one.
+Also a sudden rush of a crowd or the sea.$q$, $q$A surge is a sudden jump in demand or voltage. AI training loads swing by tens of megawatts in seconds — a new problem for grids.$q$, 'scheduled'),
+  (113, null, '2030-06-11', $q$METER$q$, $q$Energy & Power$q$, $q$The box that measures how much electricity a building uses — smart ones report it live.
+Also 100 centimetres, spelt the American way.$q$, $q$Meters measure consumption. Sub-metering by rack and tenant is how colocation operators bill by the kilowatt-hour.$q$, 'scheduled'),
+  (114, null, '2030-06-25', $q$JOULE$q$, $q$Energy & Power$q$, $q$The basic unit of energy — a watt is one of these per second.
+Named after an English physicist called James; sounds like 'jewel'.$q$, $q$A joule is the SI unit of energy. Energy per token — joules per inference — is becoming the efficiency metric of AI.$q$, 'scheduled')
+on conflict (issue_number) do nothing;
+
+-- The easier hint rhythm the daily edition uses: hint after 2 guesses, first letter after 4.
+update sw_settings set value = '2' where key = 'hint_unlock_after';
+update sw_settings set value = '4' where key = 'second_spark_after';
+
+-- Bring the calendar up to date right away (the first read would do this anyway).
+select sw_activate_due() as issues_activated;
+
+
+-- ============================================================
+-- SITE ADDRESS — used for newsletter links, share links and email redirects
+-- ============================================================
+
+-- ► EDIT if your site lives somewhere else. Keep url_style = 'path' on Vercel/Netlify (the rewrite
+--   in vercel.json / _redirects serves /spark-word/015); use 'query' on a host without rewrites.
+update sw_settings set value = 'https://tmt-spark-word-game.vercel.app' where key = 'site_url';
+update sw_settings set value = 'path' where key = 'url_style';

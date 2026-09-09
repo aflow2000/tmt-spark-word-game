@@ -86,6 +86,10 @@
     return { rpc, get mode() { return mode; }, client, ready };
   })();
 
+  /* Player accounts (Supabase Auth: email + password, or an emailed link). Preview mode keeps the
+     lightweight "claim your rank" form because there is no auth service to talk to. */
+  const ACCOUNTS = API.mode === "supabase" && CFG.accounts !== false;
+
   /* ---------------- state ---------------- */
   const S = {
     entry: null,          // parsed URL entry (issue, token, ref, view, verify)
@@ -110,6 +114,7 @@
       token: q.get("t") || null,
       ref: q.get("ref") || (q.get("t") ? "newsletter" : (hp[0] === PAGE_ID ? "link" : "site")),
       verify: q.get("verify") === "1",
+      reset: q.get("reset") === "1",
       preview: q.get("preview") === "1",
       company: q.get("company") || null,   // optional prefill for the one-time claim form (e.g. an internal newsletter's generic link)
       first: q.get("first") || null,
@@ -204,13 +209,24 @@
   const saveDraft = () => { if (S.current) store.set(KEYS.draft + draftKey(), S.current); else store.del(KEYS.draft + draftKey()); };
 
   /* ---------------- rendering: header ---------------- */
+  /* "Next word · September 22 (in 9 days)" — from the bootstrap's next_issue */
+  function daysUntil(iso) {
+    try { const t = S.boot && S.boot.today ? new Date(S.boot.today + "T00:00:00Z") : new Date(); const d = new Date(iso + "T00:00:00Z"); return Math.round((d - Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate())) / 86400000); } catch (e) { return null; }
+  }
+  function nextWordHTML() {
+    const nxt = S.boot && S.boot.next_issue;
+    if (!nxt || !nxt.date || !S.issue || !S.issue.is_active) return "";
+    const n = daysUntil(nxt.date);
+    return "<span class='sep sw-long'>·</span><span class='sw-long sw-next'>Next word " + esc(fmtDate(nxt.date).replace(/, \d{4}$/, "")) + (n != null && n >= 0 ? " <em>(" + (n === 0 ? "today" : n === 1 ? "tomorrow" : "in " + n + " days") + ")</em>" : "") + "</span>";
+  }
   function renderHeader() {
     const line = $("#swIssueLine");
     if (!S.issue) { line.innerHTML = "<span>Spark Word</span>"; return; }
     line.innerHTML =
       "<span>" + NOUNC + " " + pad3(S.issue.number) + "</span>" +
       (S.issue.title ? "<span class='sep'>·</span><span>" + esc(S.issue.title) + "</span>" : "") +
-      (S.issue.date ? (DAILY ? "<span class='sep'>·</span><span>" + esc(fmtDate(S.issue.date)) + "</span>" : "<span class='sep sw-long'>·</span><span class='sw-long'>" + esc(fmtMonth(S.issue.date)) + "</span>") : "");
+      (S.issue.date ? "<span class='sep'>·</span><span>" + esc(fmtDate(S.issue.date)) + "</span>" : "") +
+      nextWordHTML();
     document.title = "Spark Word · " + NOUNC + " " + pad3(S.issue.number) + " · TMT Spark";
 
     const banner = $("#swModeBanner");
@@ -239,8 +255,11 @@
         (st.current_streak > 0 ? "<span class='streak'><svg aria-hidden='true'><use href='#i-bolt'/></svg>" + st.current_streak + " " + NOUN + " streak</span>" : "") +
         "<button type='button' id='swPrefsBtn'>Preferences</button></div>";
     } else {
-      el.innerHTML = "<div class='sw-identity guest'><span>Playing as <b>guest</b><span class='sw-long'> · add your details after the game to be ranked</span></span>" +
-        "<button type='button' id='swWhoBtn'>Got a newsletter link?</button></div>";
+      el.innerHTML = ACCOUNTS
+        ? "<div class='sw-identity guest'><span>Playing as <b>guest</b><span class='sw-long'> · sign in to be ranked and keep your streak</span></span>" +
+          "<span class='sw-id-actions'><button type='button' data-sw-auth='signin'>Sign in</button><button type='button' class='primary' data-sw-auth='signup'>Create account</button></span></div>"
+        : "<div class='sw-identity guest'><span>Playing as <b>guest</b><span class='sw-long'> · add your details after the game to be ranked</span></span>" +
+          "<button type='button' id='swWhoBtn'>Got a newsletter link?</button></div>";
     }
   }
 
@@ -511,7 +530,7 @@
     const nxt = c.next_issue;
     const isSub = !!(c.newsletter_subscriber || (S.player && S.player.newsletter_subscriber));
     return "<div class='sw-teaser'><div><div class='t-l'>" + (DAILY ? "Tomorrow's Spark Word" + (nxt ? " · " + NOUNC + " " + pad3(nxt.number) : "") : "Next Spark Word drops with " + (nxt ? "Issue " + pad3(nxt.number) : "the next issue")) + "</div>" +
-      (nxt && nxt.date ? "<div class='dim-t' style='font-size:12px;margin-top:3px'>" + esc(fmtDate(nxt.date)) + "</div>" : "") + "</div>" +
+      (nxt && nxt.date ? "<div class='dim-t' style='font-size:12px;margin-top:3px'>" + esc(fmtDate(nxt.date)) + (function () { const n = daysUntil(nxt.date); return n != null && n > 0 ? " · in " + n + " day" + (n === 1 ? "" : "s") : ""; })() + "</div>" : "") + "</div>" +
       (isSub ? "<p>You're in. We'll see you next issue.</p>" : "<p>Subscribe to TMT Spark so you don't miss it.</p><button class='btn btn-outline btn-sm' type='button' data-join>Subscribe free</button>") + "</div>";
   }
   function learnHTML(c) {
@@ -539,7 +558,9 @@
     if (!sheet) h += "<button type='button' class='btn btn-ghost btn-sm' data-sw-replay title='Play this " + NOUN + " again for fun'>Replay in archive mode</button>";
     h += "</div>";
     if (!S.player && c.mode === "official") {
-      h += "<div class='sw-teaser' style='border-top-color:rgba(77,163,255,.3)'><div><div class='t-l' style='color:var(--spark)'>Get on the leaderboard</div></div><p>Add your name and company once — your rank for " + (DAILY ? "today" : "this issue") + " is waiting.</p><button type='button' class='btn btn-primary btn-sm' data-sw-claim>Claim my rank</button></div>";
+      h += ACCOUNTS
+        ? "<div class='sw-teaser' style='border-top-color:rgba(77,163,255,.3)'><div><div class='t-l' style='color:var(--spark)'>Get on the leaderboard</div></div><p>Create a free account — or sign in — and this result, your rank and your streak are saved under your name.</p><div class='hero-ctas' style='margin:0;justify-content:flex-start'><button type='button' class='btn btn-primary btn-sm' data-sw-auth='signup'>Create account</button><button type='button' class='btn btn-outline btn-sm' data-sw-auth='signin'>Sign in</button></div></div>"
+        : "<div class='sw-teaser' style='border-top-color:rgba(77,163,255,.3)'><div><div class='t-l' style='color:var(--spark)'>Get on the leaderboard</div></div><p>Add your name and company once — your rank for " + (DAILY ? "today" : "this issue") + " is waiting.</p><button type='button' class='btn btn-primary btn-sm' data-sw-claim>Claim my rank</button></div>";
     }
     h += teaserHTML(c);
     return h;
@@ -658,15 +679,21 @@
       "<h4>Check your email</h4><p><b style='color:var(--ink)'>" + esc(email) + "</b> is already a TMT Spark subscriber, so we've sent a one-time link to confirm it's you. Open it on this device and your rank for " + NOUNC + " " + pad3(S.issue.number) + " attaches automatically.</p>" +
       (API.mode === "preview" ? "<p style='margin-top:14px'><button type='button' class='btn btn-outline btn-sm' id='swPreviewVerify'>Preview: simulate clicking the link</button></p>" : "") + "</div>";
   }
-  async function completeVerification() {
-    const raw = store.get(KEYS.pending); if (!raw) return false;
-    let p; try { p = JSON.parse(raw); } catch (e) { store.del(KEYS.pending); return false; }
+  /* With a Supabase session in hand (magic link, confirmation link, password sign-in, password reset),
+     attach this device's guest games to the account and take its token. Works with or without a
+     pending profile — names fall back to the auth user's metadata on the server. */
+  async function completeVerification(opts) {
+    const raw = store.get(KEYS.pending);
+    let p = null; if (raw) { try { p = JSON.parse(raw); } catch (e) { store.del(KEYS.pending); } }
     try {
-      const res = await API.rpc("sw_verified_link", { p_guest_id: p.guest, p_first_name: p.first, p_last_name: p.last, p_company: p.company, p_visibility: p.vis, p_game_id: p.game });
+      const res = await API.rpc("sw_verified_link", {
+        p_guest_id: (p && p.guest) || getGuestId(), p_first_name: p ? p.first : null, p_last_name: p ? p.last : null,
+        p_company: p ? p.company : null, p_visibility: p ? p.vis : null, p_game_id: (p && p.game) || (S.game ? S.game.id : null)
+      });
       if (res && res.ok) {
         setToken(res.token); S.player = res.player; store.del(KEYS.pending);
-        if (API.mode === "supabase") { try { await API.client.auth.signOut(); } catch (e) {} }
-        toast("Verified — welcome back, " + (res.player.first_name || "") + ".");
+        if (API.mode === "supabase" && !(opts && opts.keepSession)) { try { await API.client.auth.signOut({ scope: "local" }); } catch (e) {} }
+        if (!(opts && opts.quiet)) toast((opts && opts.msg) || ("Signed in — welcome" + (res.player.first_name ? ", " + res.player.first_name : "") + "."));
         return true;
       }
     } catch (e) { console.error(e); }
@@ -683,7 +710,9 @@
       "<form class='form-grid' id='swPrefsForm'><div><label>Show me as</label><div class='radio-row'>" +
       ["first_last_initial|First name + last initial", "full_name|Full name", "anonymous|Anonymous"].map((o) => { const [val, lab] = o.split("|"); return "<label><input type='radio' name='vis' value='" + val + "'" + (v === val ? " checked" : "") + "> " + lab + "</label>"; }).join("") +
       "</div></div><button class='btn btn-primary btn-sm' type='submit' style='align-self:flex-start'>Save</button></form>" +
-      "<p class='sw-claim-note'>Not you? <button type='button' class='btn btn-ghost btn-sm' id='swForget' style='padding:2px 8px'>Play as someone else</button></p>";
+      (ACCOUNTS
+        ? "<p class='sw-claim-note'><button type='button' class='btn btn-outline btn-sm' id='swForget' style='padding:4px 12px'>Sign out</button> <span style='margin-left:8px'>Signed in as " + esc(S.player.first_name || S.player.name) + ".</span></p>"
+        : "<p class='sw-claim-note'>Not you? <button type='button' class='btn btn-ghost btn-sm' id='swForget' style='padding:2px 8px'>Play as someone else</button></p>");
     TS.openVeil("swProfileVeil");
   }
   async function savePrefs(form) {
@@ -709,7 +738,7 @@
     "<div class='hrow c'><div class='sw-tile c'>F</div><p><b>Blue</b>Right letter. Right place.</p></div>" +
     "<div class='hrow p'><div class='sw-tile p'>I</div><p><b>Gold</b>Right letter. Wrong place.</p></div>" +
     "<div class='hrow a'><div class='sw-tile a'>Z</div><p><b>Gray</b>Not in the word.</p></div></div>" +
-    "<p class='sw-howto-note'>Guess the five-letter TMT term in six tries. " + (DAILY ? "Every day brings a new word from the industries TMT Spark covers — AI, data centers, semiconductors, telecom, media, digital infrastructure and the power behind them." : "Every TMT Spark issue brings a new word from the industries we work in — data centers, power, semiconductors, telecom, media, construction and the people who build them.") + " Stuck? <b style='color:var(--wheat)'>Need a Spark?</b> above the board unlocks a hint after " + numWord(hintAfter()) + " guess" + (hintAfter() === 1 ? "" : "es") + " (solving without it ranks higher)" + (secondAfter() > 0 ? ", and a second spark reveals the first letter if you're still stuck at guess " + numWord(secondAfter()) : "") + ". Fewest guesses wins; " + (DAILY ? "streaks count consecutive days played." : "streaks are counted in issues, not days.") + "</p>";
+    "<p class='sw-howto-note'>Guess the five-letter TMT term in six tries. " + (DAILY ? "Every day brings a new word from the industries TMT Spark covers — AI, data centers, semiconductors, telecom, media, digital infrastructure and the power behind them." : "A new word arrives with every TMT Spark issue — every two weeks — from the industries we work in: AI, data centers, semiconductors, telecom, media, digital infrastructure and the power behind them." + (ACCOUNTS ? " Create a free account (or sign in) to be ranked and to keep your streak across devices." : "")) + " Stuck? <b style='color:var(--wheat)'>Need a Spark?</b> above the board unlocks a hint after " + numWord(hintAfter()) + " guess" + (hintAfter() === 1 ? "" : "es") + " (solving without it ranks higher)" + (secondAfter() > 0 ? ", and a second spark reveals the first letter if you're still stuck at guess " + numWord(secondAfter()) : "") + ". Fewest guesses wins; " + (DAILY ? "streaks count consecutive days played." : "streaks are counted in issues, not days.") + "</p>";
   function openOnboarding() {
     const sheet = $("#swOnboardSheet"); if (!sheet) return;
     sheet.innerHTML = "<button class='x' data-close='swOnboardVeil' aria-label='Close'>✕</button>" +
@@ -954,7 +983,8 @@
       S.ready = true;
       renderAll();
       track("spark_word_viewed", { ref: S.entry.ref });
-      if (!store.get(KEYS.onboarded)) openOnboarding();
+      if (S.pendingReset) { S.pendingReset = false; markOnboarded(); openAuth("reset"); }
+      else if (!store.get(KEYS.onboarded)) openOnboarding();
       if (S.entry.view) { const v = S.entry.view; S.entry.view = null; setTimeout(() => openView(v === "how-to-play" ? "howto" : v), 150); }
       if (S.entry.wantsClaim) { S.entry.wantsClaim = false; }
     } catch (e) {
@@ -968,6 +998,131 @@
       $("#swBoard").hidden = true; $("#swKbd").hidden = true;
     }
   }
+  /* ---------------- accounts: sign up · sign in · email link · password reset ---------------- */
+  const AUTH_COPY = {
+    signup: { title: "Create your <span style='font-style:italic;color:var(--spark)'>account</span>", lede: "Free, once. Your email is never shown — the leaderboard only shows the name you choose and your company." },
+    signin: { title: "Welcome <span style='font-style:italic;color:var(--spark)'>back</span>", lede: "Sign in and your streak, points and rank follow you to any device." },
+    magic:  { title: "Email me a <span style='font-style:italic;color:var(--spark)'>link</span>", lede: "No password needed — we'll email a one-time sign-in link." },
+    forgot: { title: "Reset your <span style='font-style:italic;color:var(--spark)'>password</span>", lede: "We'll email a link to choose a new one." },
+    reset:  { title: "Choose a new <span style='font-style:italic;color:var(--spark)'>password</span>", lede: "At least 8 characters." }
+  };
+  function openAuth(mode) {
+    if (!ACCOUNTS) { if (mode === "signup" || mode === "signin") openClaim(); return; }
+    const sheet = $("#swClaimSheet"); if (!sheet) return;
+    mode = AUTH_COPY[mode] ? mode : "signin";
+    track("spark_word_claim_opened", { mode });
+    const c = AUTH_COPY[mode], em = esc(S.authEmail || "");
+    const emailRow = "<div><label for='swaEmail'>Work email</label><input id='swaEmail' name='email' type='email' autocomplete='" + (mode === "signup" ? "email" : "username") + "' placeholder='you@company.com' value='" + em + "' required></div>";
+    const passRow = (label, ac) => "<div><label for='swaPass'>" + label + "</label><input id='swaPass' name='password' type='password' autocomplete='" + ac + "' minlength='8' required></div>";
+    let form = "";
+    if (mode === "signup") form = emailRow + passRow("Password <small style='color:var(--mut);font-weight:400'>(8+ characters)</small>", "new-password") +
+      "<div style='display:grid;grid-template-columns:1fr 1fr;gap:12px'><div><label for='swaFirst'>First name</label><input id='swaFirst' name='first' type='text' autocomplete='given-name' value='" + esc((S.entry && S.entry.first) || "") + "' required></div>" +
+      "<div><label for='swaLast'>Last name</label><input id='swaLast' name='last' type='text' autocomplete='family-name'></div></div>" +
+      "<div><label for='swaCompany'>Company</label><input id='swaCompany' name='company' type='text' autocomplete='organization' placeholder='Turner & Townsend' value='" + esc((S.entry && S.entry.company) || "") + "' required></div>" +
+      "<div><label>Show me on leaderboards as</label><div class='radio-row'>" +
+      "<label><input type='radio' name='vis' value='first_last_initial' checked> First name + last initial (Sarah M.)</label>" +
+      "<label><input type='radio' name='vis' value='full_name'> Full name</label>" +
+      "<label><input type='radio' name='vis' value='anonymous'> Anonymous</label></div></div>";
+    else if (mode === "signin") form = emailRow + passRow("Password", "current-password");
+    else if (mode === "magic" || mode === "forgot") form = emailRow;
+    else if (mode === "reset") form = passRow("New password", "new-password") + "<div><label for='swaPass2'>Repeat it</label><input id='swaPass2' name='password2' type='password' autocomplete='new-password' minlength='8' required></div>";
+    const submitLabel = { signup: "Create account", signin: "Sign in", magic: "Email me a link", forgot: "Email me a reset link", reset: "Save password" }[mode];
+    const links = {
+      signup: "Already have an account? <button type='button' class='sw-link' data-sw-auth='signin'>Sign in</button>",
+      signin: "New here? <button type='button' class='sw-link' data-sw-auth='signup'>Create an account</button> · <button type='button' class='sw-link' data-sw-auth='magic'>Email me a link instead</button> · <button type='button' class='sw-link' data-sw-auth='forgot'>Forgot password</button>",
+      magic:  "<button type='button' class='sw-link' data-sw-auth='signin'>Use a password instead</button> · <button type='button' class='sw-link' data-sw-auth='signup'>Create an account</button>",
+      forgot: "<button type='button' class='sw-link' data-sw-auth='signin'>Back to sign in</button>",
+      reset:  ""
+    }[mode];
+    sheet.innerHTML =
+      "<button class='x' data-close='swClaimVeil' aria-label='Close'>✕</button>" +
+      "<h3>" + c.title + "</h3><p style='color:var(--mut);font-size:14px;margin:0'>" + c.lede + "</p>" +
+      "<form class='form-grid' id='swAuthForm' data-mode='" + mode + "' novalidate>" + form +
+      "<p class='sw-claim-note' id='swAuthErr' role='alert'></p>" +
+      "<button class='btn btn-primary' type='submit' style='margin-top:4px'>" + submitLabel + "</button></form>" +
+      (links ? "<p class='sw-claim-note'>" + links + "</p>" : "") +
+      (mode === "signin" || mode === "signup" ? "<p class='sw-claim-note' style='opacity:.8'>Got a personal link in the TMT Spark newsletter? Open it from your email and you're recognised automatically — no account needed.</p>" : "");
+    $("#swResultVeil").classList.remove("on");
+    TS.openVeil("swClaimVeil");
+    setTimeout(() => { const f = $("#swAuthForm input"); if (f) f.focus(); }, 80);
+  }
+  function authSent(kind, email) {
+    const sheet = $("#swClaimSheet"); if (!sheet) return;
+    const copy = {
+      confirm: ["Check your email", "We've sent a confirmation link to <b style='color:var(--ink)'>" + esc(email) + "</b>. Open it on this device and you're signed in — this " + NOUN + "'s result comes with you."],
+      magic:   ["Check your email", "A one-time sign-in link is on its way to <b style='color:var(--ink)'>" + esc(email) + "</b>. Open it on this device to sign in."],
+      forgot:  ["Check your email", "If <b style='color:var(--ink)'>" + esc(email) + "</b> has an account, a password reset link is on its way. Open it on this device and choose a new password."]
+    }[kind];
+    sheet.innerHTML = "<button class='x' data-close='swClaimVeil' aria-label='Close'>✕</button>" +
+      "<div class='sw-verify'><span class='ok'><svg width='24' height='24' aria-hidden='true'><use href='#i-send'/></svg></span><h4>" + copy[0] + "</h4><p>" + copy[1] + "</p>" +
+      "<p class='sw-claim-note' style='margin-top:14px'>Nothing there after a minute? Check your spam folder, or <button type='button' class='sw-link' data-sw-auth='" + (kind === "confirm" ? "signup" : kind) + "'>try again</button>.</p></div>";
+  }
+  function resetRedirectUrl() { return verifyRedirectUrl().replace("&verify=1", "&reset=1"); }
+  function authErrorText(e, mode) {
+    const m = (e && (e.message || e.msg)) || "", code = e && (e.code || e.error_code) || "";
+    if (/already registered|already exists|user_already_exists/i.test(m + code)) return "That email already has an account — sign in instead, or use “Forgot password”.";
+    if (/invalid login credentials|invalid_credentials/i.test(m + code)) return mode === "signin" ? "Wrong email or password. New here? Create an account — a newsletter subscriber's history attaches automatically." : "Wrong email or password.";
+    if (/email not confirmed|email_not_confirmed/i.test(m + code)) return "Please confirm your email first — we've sent the link again.";
+    if (/signups not allowed|signup_disabled|otp_disabled/i.test(m + code)) return "No account with that email yet — create one first.";
+    if (/rate limit|over_email_send_rate_limit|too many/i.test(m + code)) return "Too many emails just now — wait a minute and try again.";
+    if (/weak|password should be/i.test(m + code)) return "Choose a longer password (at least 8 characters).";
+    return "Couldn't do that (" + (m || "unknown error") + "). Please try again.";
+  }
+  async function submitAuth(form) {
+    const mode = form.getAttribute("data-mode"), f = new FormData(form), err = $("#swAuthErr"); err.textContent = "";
+    const email = (f.get("email") || "").trim().toLowerCase(), password = f.get("password") || "";
+    S.authEmail = email || S.authEmail;
+    if (mode !== "reset" && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "Please enter a valid work email."; return; }
+    if ((mode === "signup" || mode === "signin" || mode === "reset") && password.length < 8) { err.textContent = "Password needs at least 8 characters."; return; }
+    const auth = API.client.auth, btn = form.querySelector("button[type=submit]"); btn.disabled = true;
+    try {
+      if (mode === "signup") {
+        const first = (f.get("first") || "").trim(), last = (f.get("last") || "").trim() || null, company = (f.get("company") || "").trim(), vis = f.get("vis") || "first_last_initial";
+        if (!first) { err.textContent = "First name is required."; return; }
+        if (!company) { err.textContent = "Company is required."; return; }
+        store.set(KEYS.pending, JSON.stringify({ guest: getGuestId(), game: S.game ? S.game.id : null, first, last, company, vis, email, issue: S.issue && S.issue.number }));
+        const { data, error } = await auth.signUp({ email, password, options: { emailRedirectTo: verifyRedirectUrl(), data: { first_name: first, last_name: last, company, visibility: vis } } });
+        if (error) { err.textContent = authErrorText(error, mode); return; }
+        if (data && data.session) {            // "Confirm email" is off in Supabase → signed in immediately
+          const ok = await completeVerification({ msg: "Welcome, " + first + " — you're on the leaderboard." });
+          if (ok) { TS.closeVeil("swClaimVeil"); await reloadState(); if (S.completion) openResultSheet(); }
+          else err.textContent = "Signed up, but couldn't attach your profile — try signing in.";
+        } else if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+          err.textContent = "That email already has an account — sign in instead, or use “Forgot password”.";   // Supabase hides existing users on sign-up
+        } else authSent("confirm", email);
+      } else if (mode === "signin") {
+        const { error } = await auth.signInWithPassword({ email, password });
+        if (error) { err.textContent = authErrorText(error, mode); return; }
+        const ok = await completeVerification();
+        if (ok) { TS.closeVeil("swClaimVeil"); await reloadState(); if (S.completion) openResultSheet(); }
+        else err.textContent = "Signed in, but couldn't load your profile — please try again.";
+      } else if (mode === "magic") {
+        store.set(KEYS.pending, JSON.stringify({ guest: getGuestId(), game: S.game ? S.game.id : null, email, issue: S.issue && S.issue.number }));
+        const { error } = await auth.signInWithOtp({ email, options: { emailRedirectTo: verifyRedirectUrl(), shouldCreateUser: false } });
+        if (error) { err.textContent = authErrorText(error, mode); return; }
+        authSent("magic", email);
+      } else if (mode === "forgot") {
+        const { error } = await auth.resetPasswordForEmail(email, { redirectTo: resetRedirectUrl() });
+        if (error && !/rate limit/i.test(error.message || "")) { err.textContent = authErrorText(error, mode); return; }
+        authSent("forgot", email);
+      } else if (mode === "reset") {
+        if (password !== (f.get("password2") || "")) { err.textContent = "The two passwords don't match."; return; }
+        const { error } = await auth.updateUser({ password });
+        if (error) { err.textContent = authErrorText(error, mode); return; }
+        S.pendingReset = false;
+        const ok = await completeVerification({ msg: "Password saved — you're signed in." });
+        if (ok) { TS.closeVeil("swClaimVeil"); await reloadState(); }
+        else err.textContent = "Password saved, but couldn't load your profile — sign in with it.";
+      }
+    } catch (e) { console.error(e); err.textContent = "Couldn't reach Spark Word — please try again."; }
+    finally { btn.disabled = false; }
+  }
+  async function signOut() {
+    setToken(null); store.del(KEYS.guest); store.del(KEYS.pending); S.player = null;
+    if (API.mode === "supabase") { try { await API.client.auth.signOut({ scope: "local" }); } catch (e) {} }
+    TS.closeVeil("swProfileVeil"); await reloadState(); toast(ACCOUNTS ? "Signed out — playing as a guest." : "Playing as a guest now.");
+  }
+
   async function reloadState() {
     await bootstrap(S.issue ? S.issue.number : null, { silent: true });
     S.bootAt = Date.now();
@@ -987,7 +1142,8 @@
     const pv = t.closest("#swPreviewVerify"); if (pv && window.SparkWordPreview) { window.SparkWordPreview.simulateVerifiedSession(JSON.parse(store.get(KEYS.pending) || "{}").email); completeVerification().then((ok) => { if (ok) { TS.closeVeil("swClaimVeil"); reloadState().then(openResultSheet); } }); return; }
     const pr = t.closest("#swPrefsBtn"); if (pr) { openPrefs(); return; }
     const who = t.closest("#swWhoBtn"); if (who) { openWho(); return; }
-    const fg = t.closest("#swForget"); if (fg) { setToken(null); store.del(KEYS.guest); S.player = null; TS.closeVeil("swProfileVeil"); reloadState(); toast("Playing as a guest now."); return; }
+    const fg = t.closest("#swForget"); if (fg) { signOut(); return; }
+    const au = t.closest("[data-sw-auth]"); if (au) { openAuth(au.getAttribute("data-sw-auth")); return; }
     const st = t.closest("#swStartBtn"); if (st) { markOnboarded(); TS.closeVeil("swOnboardVeil"); return; }
     const onbX = t.closest("#swOnboardSheet .x"); if (onbX) { markOnboarded(); return; }
     const ap = t.closest("[data-as-period]"); if (ap) { S.asPeriod = ap.getAttribute("data-as-period"); loadLeaderboard("allstars"); return; }
@@ -1009,6 +1165,7 @@
   }, true);
   document.addEventListener("submit", (e) => {
     if (e.target.id === "swClaimForm") { e.preventDefault(); submitClaim(e.target); }
+    if (e.target.id === "swAuthForm") { e.preventDefault(); submitAuth(e.target); }
     if (e.target.id === "swPrefsForm") { e.preventDefault(); savePrefs(e.target); }
   });
   document.addEventListener("input", (e) => {
@@ -1022,16 +1179,14 @@
     buildKeyboard();
     if (TS.onPage) TS.onPage((id) => { document.body.classList.toggle("sw-active", id === PAGE_ID); if (id === PAGE_ID) onPageShown(); else { S.pageShown = false; } });
 
-    // magic-link round trip: a Supabase session + a pending claim → attach and finish
-    if (S.entry.verify) {
-      try {
-        if (API.mode === "supabase") {
-          const { data } = await API.client.auth.getSession();
-          if (data && data.session) await completeVerification();
-          else toast("That verification link has expired — request a new one.");
-        }
-      } catch (e) {}
-      try { const u = new URL(location.href); u.searchParams.delete("verify"); u.searchParams.delete("code"); history.replaceState(null, "", u.pathname + (u.search || "") + "#" + PAGE_ID); } catch (e) {}
+    // email round trips: confirmation / magic link (?verify=1) and password reset (?reset=1) land here with a Supabase session
+    if (S.entry.verify || S.entry.reset) {
+      let session = null;
+      try { if (API.mode === "supabase") { const { data } = await API.client.auth.getSession(); session = data && data.session; } } catch (e) {}
+      try { const u = new URL(location.href); ["verify", "reset", "code", "error", "error_code", "error_description"].forEach((k) => u.searchParams.delete(k)); history.replaceState(null, "", u.pathname + (u.search || "") + "#" + PAGE_ID); } catch (e) {}
+      if (S.entry.reset) { if (session) S.pendingReset = true; else toast("That password link has expired — request a new one."); }
+      else if (session) await completeVerification({ msg: "Email confirmed — you're signed in." });
+      else toast("That link has expired — sign in to get a new one.");
     }
 
     if (S.entry.wantsPage && TS.showPage) TS.showPage(PAGE_ID, true);

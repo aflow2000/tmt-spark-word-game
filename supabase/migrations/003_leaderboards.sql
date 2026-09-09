@@ -36,6 +36,7 @@ declare
   v_top jsonb; v_me jsonb;
   mine games%rowtype;
 begin
+  perform sw_activate_due();
   s := sw_resolve_subscriber(p_token);
   if p_issue_number is null then
     select * into i from issues where status = 'active';
@@ -187,6 +188,7 @@ declare
   s subscribers%rowtype; i issues%rowtype; g games%rowtype;
   v_reveal boolean; v_total int; v_solved int; v_top jsonb; v_champ text;
 begin
+  perform sw_activate_due();
   s := sw_resolve_subscriber(p_token);
   if p_issue_number is not null then
     select * into i from issues where issue_number = p_issue_number and status in ('active','archived');
