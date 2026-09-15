@@ -1406,7 +1406,49 @@ body :is(h1,h2,h3,h4,.serif,.display,.h2,.h3,.sw-title,.sw-tile,.sw-res .r-word,
 #page-spark-word .sw-tile.c,#page-spark-word .sw-key.c{background:#1E4479!important;border-color:#1E4479!important;color:#FFFFFF!important}
 #page-spark-word .sw-tile.p,#page-spark-word .sw-key.p{background:#80C8EE!important;border-color:#80C8EE!important;color:#1E4479!important}
 #page-spark-word .sw-tile.a,#page-spark-word .sw-key.a{background:#D2DAE4!important;border-color:#D2DAE4!important;color:#4B6994!important}
-</style></head>
+</style><style id="spark-panel-contrast-fix">
+/* Spark Word contrast fix: keep these rules after assets/spark-word.css.
+   Solid white surfaces prevent the older dark gradients from overriding the brand theme. */
+#page-home #homeSparkWord .sw-promo,
+#page-spark-word #swResult,
+.sheet.sw-sheet.sw-res{
+  background:#FFFFFF!important;
+  background-image:none!important;
+  color:#1E4479!important;
+  border-color:#D2DAE4!important;
+  --ink:#1E4479;--mut:#4B6994;--dim:#4B6994;
+  --spark:#1E4479;--celadon:#4B6994;--wheat:#4B6994;
+  --pine:#FFFFFF;--moss:#E9ECF2;--line:#A5B4C9;--line-soft:#D2DAE4;
+}
+#page-home #homeSparkWord .sw-promo::after{background:none!important}
+#page-home #homeSparkWord .sw-promo :is(.eyebrow,.h2,.h2 em){color:#1E4479!important}
+#page-home #homeSparkWord .sw-promo :is(.lede,.hero-note,.hero-note b){color:#4B6994!important}
+#page-spark-word #swResult :is(.r-eyebrow,.r-word,.r-exp b,.rk-v,.rk-pct),
+.sheet.sw-sheet.sw-res :is(.r-eyebrow,.r-word,.r-exp b,.rk-v,.rk-pct){color:#1E4479!important}
+#page-spark-word #swResult :is(.r-exp,.r-line,.dim-t,.rk-l,.rk-v small),
+.sheet.sw-sheet.sw-res :is(.r-exp,.r-line,.dim-t,.rk-l,.rk-v small){color:#4B6994!important}
+#page-spark-word #swResult .sw-rank,
+.sheet.sw-sheet.sw-res .sw-rank{background:#E9ECF2!important;border-color:#D2DAE4!important}
+#page-spark-word #swResult .sw-stats .stat,
+.sheet.sw-sheet.sw-res .sw-stats .stat{background:#FFFFFF!important;border-color:#A5B4C9!important}
+#page-spark-word #swResult .tag,
+.sheet.sw-sheet.sw-res .tag{color:#1E4479!important;background:#E9ECF2!important;border-color:#A5B4C9!important}
+#page-spark-word #swResult .sw-badge,
+.sheet.sw-sheet.sw-res .sw-badge{color:#FFFFFF!important;background:#1E4479!important}
+#page-home #homeSparkWord .sw-promo .btn-primary,
+#page-spark-word #swResult .btn-primary,
+.sheet.sw-sheet.sw-res .btn-primary{color:#FFFFFF!important;background:#1E4479!important;border-color:#1E4479!important}
+#page-home #homeSparkWord .sw-promo .btn-primary:hover,
+#page-spark-word #swResult .btn-primary:hover,
+.sheet.sw-sheet.sw-res .btn-primary:hover{background:#4B6994!important;border-color:#4B6994!important}
+#page-home #homeSparkWord .sw-promo .btn-outline,
+#page-spark-word #swResult :is(.btn-outline,.btn-ghost,.sw-learn),
+.sheet.sw-sheet.sw-res :is(.btn-outline,.btn-ghost,.sw-learn){color:#1E4479!important;background:#FFFFFF!important}
+#page-home #homeSparkWord .sw-promo .btn-outline:hover,
+#page-spark-word #swResult :is(.btn-outline,.btn-ghost,.sw-learn):hover,
+.sheet.sw-sheet.sw-res :is(.btn-outline,.btn-ghost,.sw-learn):hover{background:#E9ECF2!important}
+</style>
+</head>
 <body>
 <!-- ============ icon sprite ============ -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
