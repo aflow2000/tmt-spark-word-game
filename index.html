@@ -1448,6 +1448,23 @@ body :is(h1,h2,h3,h4,.serif,.display,.h2,.h3,.sw-title,.sw-tile,.sw-res .r-word,
 #page-spark-word #swResult :is(.btn-outline,.btn-ghost,.sw-learn):hover,
 .sheet.sw-sheet.sw-res :is(.btn-outline,.btn-ghost,.sw-learn):hover{background:#E9ECF2!important}
 </style>
+<style id="spark-launch-content">
+/* Launch announcements */
+.launch-tabs{display:flex;gap:12px;margin:0 0 24px}
+.launch-tabs .chip{font-family:Verdana!important;font-size:14px;padding:12px 22px}
+.launch-card{display:flex;gap:32px;align-items:flex-start;padding:44px;background:#FFFFFF;border:1px solid #D2DAE4;border-top:3px solid #1E4479;border-radius:8px}
+.launch-pumpkin{font-size:60px;line-height:1.2;flex:none}
+.launch-card .h2{font-size:clamp(1.8rem,3vw,2.8rem);margin-bottom:18px}
+.launch-date{color:#1E4479;font-family:Verdana;font-size:17px;line-height:1.6;margin:12px 0 20px}
+.launch-card .btn{margin-top:28px}
+#page-events .event{background:#FFFFFF;border-color:#D2DAE4}
+#page-events .ev-date{background:#E9ECF2}
+#page-events .ev-body h3{margin-top:20px}
+.event-host{color:#1E4479;font-size:22px;margin:0}
+.event-details{color:#4B6994;font-size:14px;margin:0;line-height:1.7}
+#page-events .ev-foot{border-top:1px solid #D2DAE4;padding-top:24px}
+@media(max-width:600px){.launch-card{padding:26px;gap:20px;flex-direction:column}.launch-pumpkin{font-size:44px}.launch-date{font-size:15px}}
+</style>
 </head>
 <body>
 <!-- ============ icon sprite ============ -->
@@ -1481,7 +1498,6 @@ body :is(h1,h2,h3,h4,.serif,.display,.h2,.h3,.sw-title,.sw-tile,.sw-res .r-word,
 <header id="top">
   <div class="container navwrap">
     <button class="logo" data-go="home" aria-label="TMT Spark — home">
-      <svg aria-hidden="true"><use href="#i-spark" style="color:var(--spark)"/></svg>
       <span>
         <span class="lw">TMT&nbsp;<em>Spark</em></span>
         <span class="by">By Turner <em>&amp;</em> Townsend</span>
@@ -1525,7 +1541,7 @@ body :is(h1,h2,h3,h4,.serif,.display,.h2,.h3,.sw-title,.sw-tile,.sw-res .r-word,
       <h1 class="display">Making sense of <em>what's&nbsp;next</em> in Technology, Media &amp; Telecommunications.</h1>
       <p class="hero-sub">TMT Spark brings together industry leaders, emerging technologies and the people building the future of TMT. Through newsletters, live conversations and industry events, we turn complex developments into practical insights.</p>
       <div class="hero-ctas">
-        <button class="btn btn-primary" data-go="insights">Explore Insights <svg class="arr" width="15" height="15" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+        <button class="btn btn-primary" data-go="insights" title="Past newsletters and highlights from live events">Explore Insights <svg class="arr" width="15" height="15" aria-hidden="true"><use href="#i-arrow"/></svg></button>
         <button class="btn btn-outline" data-go="events">Upcoming Events</button>
         <button class="btn btn-ghost" data-join>Join TMT Spark →</button>
       </div>
@@ -1548,14 +1564,14 @@ body :is(h1,h2,h3,h4,.serif,.display,.h2,.h3,.sw-title,.sw-tile,.sw-res .r-word,
         <p class="lede">TMT Spark is a media platform, a learning platform, an event series and an industry community — each piece built to feed the others.</p>
       </div>
       <div class="pillars">
-        <button class="pillar" data-go="insights">
+        <button class="pillar" data-go="explain">
           <div class="p-top">
             <span class="p-ico"><svg aria-hidden="true"><use href="#i-doc"/></svg></span>
-            <span class="p-name">Insights</span>
+            <span class="p-name">Explain It</span>
           </div>
           <h3>Explained simply</h3>
-          <p>Monthly newsletters that make sense of what matters — AI, data centers, semiconductors, cloud, telecom, energy, workplace tech, streaming, robotics and the rest of the TMT map.</p>
-          <span class="p-link">Read TMT Spark Monthly <svg width="14" height="14" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+          <p>Quick explanations of the technologies shaping TMT: what they are, why they matter, and what happens next.</p>
+          <span class="p-link">Explore Explain It <svg width="14" height="14" aria-hidden="true"><use href="#i-arrow"/></svg></span>
         </button>
         <button class="pillar" data-go="events">
           <div class="p-top">
@@ -1597,370 +1613,34 @@ body :is(h1,h2,h3,h4,.serif,.display,.h2,.h3,.sw-title,.sw-tile,.sw-res .r-word,
     </div>
   </section>
 
-  <!-- series -->
-  <section class="section">
-    <div class="container">
-      <div class="sec-head split">
-        <div>
-          <p class="eyebrow">Featured series</p>
-          <h2 class="h2">Recurring formats, familiar names.</h2>
-        </div>
-        <p class="lede" style="max-width:380px">Six repeatable formats keep the platform publishing every week without reinventing the wheel.</p>
-      </div>
-      <div class="series-grid">
-        <button class="series-card" data-go="events">
-          <span class="s-ico"><svg aria-hidden="true"><use href="#i-live"/></svg></span>
-          <span>
-            <h4>Spark <em>Sessions</em></h4>
-            <p>Live conversations with industry leaders — roundtables, panels and briefings.</p>
-            <span class="s-tag">Monthly · Live</span>
-          </span>
-        </button>
-        <button class="series-card" data-go="insights">
-          <span class="s-ico"><svg aria-hidden="true"><use href="#i-doc"/></svg></span>
-          <span>
-            <h4>Spark <em>Brief</em></h4>
-            <p>The monthly TMT newsletter — the most important developments, explained simply.</p>
-            <span class="s-tag">Monthly · Newsletter</span>
-          </span>
-        </button>
-        <button class="series-card" data-go="explain">
-          <span class="s-ico"><svg aria-hidden="true"><use href="#i-bolt"/></svg></span>
-          <span>
-            <h4>Spark <em>Explained</em></h4>
-            <p>Simple technology explainers — complicated concepts in about 60 seconds.</p>
-            <span class="s-tag">Weekly · Explainers</span>
-          </span>
-        </button>
-        <button class="series-card" data-go="home">
-          <span class="s-ico"><svg aria-hidden="true"><use href="#i-chart"/></svg></span>
-          <span>
-            <h4>Spark <em>Signals</em></h4>
-            <p>Quick observations about emerging trends — the ticker running across the top of Spark.</p>
-            <span class="s-tag">Continuous · Signals</span>
-          </span>
-        </button>
-        <button class="series-card" data-go="insights">
-          <span class="s-ico"><svg aria-hidden="true"><use href="#i-compass"/></svg></span>
-          <span>
-            <h4>Spark <em>Outlook</em></h4>
-            <p>Annual predictions for where TMT industries are going. First edition: January 2027.</p>
-            <span class="s-tag">Annual · Outlook</span>
-          </span>
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- closing -->
-  <div class="closing">
-    <div class="glow2"></div>
-    <div class="closing-inner">
-      <p class="eyebrow" style="justify-content:center">Why now</p>
-      <h2>TMT is changing <em>faster than ever.</em></h2>
-      <p>AI infrastructure, energy, data centers, semiconductors, telecom, media and real estate are becoming increasingly interconnected. Understanding those connections requires bringing the right people into the same conversation.<br><br><b style="color:var(--ink)">That's what TMT Spark is designed to do.</b></p>
-      <div class="hero-ctas">
-        <button class="btn btn-primary" data-join>Join the Conversation <svg class="arr" width="15" height="15" aria-hidden="true"><use href="#i-arrow"/></svg></button>
-        <button class="btn btn-outline" data-go="about">Explore TMT Spark</button>
-      </div>
-    </div>
-  </div>
-
 </section>
-<!-- ================================================================
-     INSIGHTS — TMT Spark Monthly
-================================================================= -->
+<!-- Insights: past newsletters and live event highlights -->
 <section class="page" id="page-insights">
   <section class="section">
     <div class="container">
-      <div class="sec-head split">
+      <div class="sec-head">
+        <p class="eyebrow">Explore Insights</p>
+        <h2 class="h2">Past newsletters &amp;<br>highlights from live events.</h2>
+        <p class="lede">A home for TMT Spark newsletters, key takeaways and highlights from our live conversations.</p>
+      </div>
+      <div class="launch-tabs" role="tablist" aria-label="Insights editions">
+        <button class="chip on" id="insightsComingTab" role="tab" aria-selected="true" aria-controls="insightsComingPanel" type="button">To Come Out</button>
+      </div>
+      <article class="launch-card" id="insightsComingPanel" role="tabpanel" aria-labelledby="insightsComingTab">
+        <div class="launch-pumpkin"><svg width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Pumpkin"><path d="M31 16C29 9 34 6 39 7L38 13C34 12 34 16 35 20" fill="#4B6994"/><ellipse cx="22" cy="38" rx="17" ry="22" fill="#D55C17"/><ellipse cx="43" cy="38" rx="17" ry="22" fill="#D55C17"/><ellipse cx="32" cy="38" rx="15" ry="23" fill="#EE8B27"/><path d="M29 19C22 29 23 49 29 58M36 19C42 30 41 49 36 58" fill="none" stroke="#D55C17" stroke-width="2"/></svg></div>
         <div>
-          <p class="eyebrow">Spark Brief</p>
-          <h2 class="h2">TMT Spark <span style="font-style:italic;color:var(--spark)">Monthly</span></h2>
-          <p class="lede">The most important developments across Technology, Media &amp; Telecommunications, explained simply.</p>
+          <p class="eyebrow">Newsletter · Edition 001</p>
+          <h3 class="h2">First newsletter edition</h3>
+          <p class="launch-date">Scheduled for <time datetime="2026-10-31">October 31st, 2026</time></p>
+          <p class="lede">Our first edition is on its way. Past newsletters and highlights from live events will appear here as they are published.</p>
+          <button class="btn btn-primary" data-join>Join Spark for updates</button>
         </div>
-        <button class="btn btn-outline" data-scroll="subscribeBox">Subscribe free <svg class="arr" width="14" height="14" aria-hidden="true"><use href="#i-arrow"/></svg></button>
-      </div>
-
-      <div class="filterbar" id="insightFilters" role="group" aria-label="Filter stories by category">
-        <button class="chip on" data-cat="all">All topics</button>
-        <button class="chip" data-cat="ai">AI</button>
-        <button class="chip" data-cat="datacenters">Data Centers</button>
-        <button class="chip" data-cat="semiconductors">Semiconductors</button>
-        <button class="chip" data-cat="telecom">Telecom</button>
-        <button class="chip" data-cat="media">Media</button>
-        <button class="chip" data-cat="infrastructure">Infrastructure</button>
-        <button class="chip" data-cat="energy">Energy</button>
-        <button class="chip" data-cat="workplace">Workplace</button>
-        <button class="chip" data-cat="capital">Capital Markets</button>
-        <button class="chip" data-cat="construction">Construction</button>
-        <span class="fcount" id="storyCount">13 STORIES</span>
-      </div>
-
-      <!-- featured edition -->
-      <div class="edition" id="edition14">
-        <div class="ed-head">
-          <div>
-            <div class="ed-meta"><span>Edition 014</span><span>·</span><span>September 2026</span><span>·</span><span>5 stories</span></div>
-            <h3>The AI Infrastructure Race</h3>
-            <p class="ed-sub">Compute is scaling faster than the grid, the supply chain and the construction market can follow. This month: where the bottlenecks really are.</p>
-          </div>
-          <div class="ed-badge"><div class="num">014</div><div class="cap">Latest edition</div></div>
-        </div>
-        <div class="ed-body">
-
-          <article class="art" data-cats="ai datacenters energy" id="a1">
-            <div class="art-top">
-              <span class="tag">Data Centers</span><span class="tag">Energy</span>
-              <span class="art-rt">4 min read</span>
-            </div>
-            <h4>AI Data Centers Are Running Into the Power Wall</h4>
-            <p class="art-sum">Racks that drew 5–10&nbsp;kW a few years ago are being specified at 100&nbsp;kW and beyond, and campuses once measured in megawatts are now planned in gigawatts. The constraint on AI growth is shifting from chips and capital to electricity and cooling.</p>
-            <button class="art-more-btn" data-expand>Why it matters <span class="chev">▾</span></button>
-            <div class="art-more">
-              <div>
-                <span class="lbl">Why it matters</span>
-                <p>Site selection is becoming an energy question first and a real estate question second. Power availability — not land price — now sets where AI capacity gets built, how fast it delivers and what it costs.</p>
-              </div>
-              <div>
-                <span class="lbl">Industry impacted</span>
-                <div class="chips"><span class="chip">Data centers</span><span class="chip">Utilities</span><span class="chip">Construction</span><span class="chip">Real estate</span></div>
-              </div>
-            </div>
-          </article>
-
-          <article class="art" data-cats="datacenters infrastructure construction" id="a2">
-            <div class="art-top">
-              <span class="tag">Data Centers</span><span class="tag">Infrastructure</span>
-              <span class="art-rt">3 min read</span>
-            </div>
-            <h4>The 800V Data Center</h4>
-            <p class="art-sum">To feed ever-denser racks, operators are rethinking the electrical backbone of the building — moving from traditional lower-voltage AC distribution toward higher-voltage DC. Fewer conversions mean less wasted energy, less copper and less heat.</p>
-            <button class="art-more-btn" data-expand>Why it matters <span class="chev">▾</span></button>
-            <div class="art-more">
-              <div>
-                <span class="lbl">Why it matters</span>
-                <p>A different electrical architecture changes switchgear, busways, commissioning and the skills contractors need on site. New builds and retrofits will diverge — and the supply chain will follow the new spec.</p>
-              </div>
-              <div>
-                <span class="lbl">Industry impacted</span>
-                <div class="chips"><span class="chip">Data centers</span><span class="chip">Electrical contractors</span><span class="chip">Equipment makers</span></div>
-              </div>
-            </div>
-          </article>
-
-          <article class="art" data-cats="energy datacenters capital" id="a3">
-            <div class="art-top">
-              <span class="tag">Energy</span><span class="tag">Capital Markets</span>
-              <span class="art-rt">4 min read</span>
-            </div>
-            <h4>Nuclear Meets AI</h4>
-            <p class="art-sum">Hyperscalers are signing long-term power agreements with existing nuclear plants and backing small modular reactors. AI demand wants firm, carbon-free power at gigawatt scale — and interconnection queues are too slow for AI timelines.</p>
-            <button class="art-more-btn" data-expand>Why it matters <span class="chev">▾</span></button>
-            <div class="art-more">
-              <div>
-                <span class="lbl">Why it matters</span>
-                <p>Energy strategy is becoming a core part of digital infrastructure planning. Decade-long power bets will shape where campuses are sited, who partners with whom, and which markets win the next wave of investment.</p>
-              </div>
-              <div>
-                <span class="lbl">Industry impacted</span>
-                <div class="chips"><span class="chip">Energy</span><span class="chip">Data centers</span><span class="chip">Investors</span><span class="chip">Regulators</span></div>
-              </div>
-            </div>
-          </article>
-
-          <article class="art" data-cats="semiconductors construction capital" id="a4">
-            <div class="art-top">
-              <span class="tag">Semiconductors</span><span class="tag">Construction</span>
-              <span class="art-rt">5 min read</span>
-            </div>
-            <h4>The Semiconductor Construction Boom</h4>
-            <p class="art-sum">Multibillion-dollar fab projects are reshaping construction demand across the United States. A leading-edge fab is among the most complex buildings ever delivered — cleanrooms, vibration control, ultra-pure water and thousands of skilled trades on one site.</p>
-            <button class="art-more-btn" data-expand>Why it matters <span class="chev">▾</span></button>
-            <div class="art-more">
-              <div>
-                <span class="lbl">Why it matters</span>
-                <p>Fab mega-projects absorb skilled labor, equipment and materials for years, tightening cost and schedule for everyone building near them. Suppliers and housing follow the fabs — and so does regional real estate demand.</p>
-              </div>
-              <div>
-                <span class="lbl">Industry impacted</span>
-                <div class="chips"><span class="chip">Semiconductors</span><span class="chip">Construction</span><span class="chip">Regional markets</span></div>
-              </div>
-            </div>
-          </article>
-
-          <article class="art" data-cats="ai infrastructure workplace" id="a5">
-            <div class="art-top">
-              <span class="tag">AI</span><span class="tag">Robotics</span>
-              <span class="art-rt">3 min read</span>
-            </div>
-            <h4>Robotics Leave the Lab</h4>
-            <p class="art-sum">Foundation models are reaching into the physical world. Humanoid and mobile robots are moving from demo videos to paid pilots in manufacturing and logistics — the first commercial test of "physical AI" at scale.</p>
-            <button class="art-more-btn" data-expand>Why it matters <span class="chev">▾</span></button>
-            <div class="art-more">
-              <div>
-                <span class="lbl">Why it matters</span>
-                <p>If robots work, industrial space changes: more power, different layouts, new safety zones and different labor profiles. Early adopters will quietly re-spec warehouses and plants over the next lease cycle.</p>
-              </div>
-              <div>
-                <span class="lbl">Industry impacted</span>
-                <div class="chips"><span class="chip">Manufacturing</span><span class="chip">Logistics</span><span class="chip">Industrial real estate</span></div>
-              </div>
-            </div>
-          </article>
-
-          <!-- Spark Word CTA — the same module ships in the email edition -->
-          <div class="sw-cta" id="edition14SparkWord">
-            <div class="sw-mini" aria-hidden="true">
-              <div class="sw-row"><div class="sw-tile a">P</div><div class="sw-tile p">O</div><div class="sw-tile a">W</div><div class="sw-tile c">E</div><div class="sw-tile c">R</div></div>
-              <div class="sw-row"><div class="sw-tile c">F</div><div class="sw-tile c">I</div><div class="sw-tile c">B</div><div class="sw-tile c">E</div><div class="sw-tile c">R</div></div>
-            </div>
-            <div class="cta-txt">
-              <p class="cta-l">Spark Word · Issue 014</p>
-              <h5>Can you crack this issue's Spark Word?</h5>
-              <p>Five letters. Six guesses. See how you rank against the TMT industry.</p>
-            </div>
-            <button class="btn btn-sm" data-go="spark-word">Play Spark Word <svg class="arr" width="13" height="13" aria-hidden="true"><use href="#i-arrow"/></svg></button>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- library -->
-      <div class="sec-head" style="margin-top:72px;margin-bottom:28px">
-        <p class="eyebrow">From recent editions</p>
-        <h2 class="h2" style="font-size:clamp(1.7rem,3vw,2.3rem)">The story library</h2>
-      </div>
-      <div class="lib-grid" id="libGrid">
-
-        <article class="lib-card" data-cats="energy infrastructure" id="l1">
-          <div class="art-top"><span class="tag">Energy</span><span class="tag">Infrastructure</span><span class="art-rt">3 min</span></div>
-          <h4>The Interconnection Queue Is the New Zoning Board</h4>
-          <p>In major markets, connecting a large project to the grid can take longer than designing and building it. Grid access — not permits — increasingly decides what gets built where.</p>
-          <button class="lib-more" data-expand>Why it matters ▾</button>
-          <div class="lib-why"><span class="lbl">Why it matters</span><p>Developers are buying power positions the way they once bought land positions. Expect premiums for energized sites and creative behind-the-meter deals.</p></div>
-        </article>
-
-        <article class="lib-card" data-cats="capital datacenters" id="l2">
-          <div class="art-top"><span class="tag">Capital Markets</span><span class="art-rt">4 min</span></div>
-          <h4>Who Pays for the AI Buildout?</h4>
-          <p>Hundreds of billions in data center capex is being financed by a new mix of infrastructure funds, private credit, joint ventures and hyperscaler balance sheets.</p>
-          <button class="lib-more" data-expand>Why it matters ▾</button>
-          <div class="lib-why"><span class="lbl">Why it matters</span><p>How the buildout is financed shapes who owns digital infrastructure in ten years — and how resilient the market is if AI demand growth wobbles.</p></div>
-        </article>
-
-        <article class="lib-card" data-cats="construction infrastructure" id="l3">
-          <div class="art-top"><span class="tag">Construction</span><span class="art-rt">3 min</span></div>
-          <h4>The Two-Year Transformer</h4>
-          <p>Lead times for large transformers, switchgear and generators still stretch past two years. Procurement now drives the construction schedule, not the other way around.</p>
-          <button class="lib-more" data-expand>Why it matters ▾</button>
-          <div class="lib-why"><span class="lbl">Why it matters</span><p>Teams that lock equipment early win. Expect more owner-furnished equipment, more standardization and more appetite for modular electrical rooms.</p></div>
-        </article>
-
-        <article class="lib-card" data-cats="telecom infrastructure" id="l4">
-          <div class="art-top"><span class="tag">Telecom</span><span class="art-rt">3 min</span></div>
-          <h4>Fiber's Quiet Land Grab</h4>
-          <p>Long-haul and metro fiber routes are being built and bought along the corridors connecting AI data center clusters. Connectivity is following compute.</p>
-          <button class="lib-more" data-expand>Why it matters ▾</button>
-          <div class="lib-why"><span class="lbl">Why it matters</span><p>Fiber access is becoming a site-selection criterion alongside power. Carriers, developers and investors are converging on the same maps.</p></div>
-        </article>
-
-        <article class="lib-card" data-cats="media capital" id="l5">
-          <div class="art-top"><span class="tag">Media</span><span class="art-rt">4 min</span></div>
-          <h4>Streaming Rebundles Itself</h4>
-          <p>Consolidation, ad-supported tiers and record sports-rights deals are pushing streaming back toward something that looks a lot like the bundle it replaced.</p>
-          <button class="lib-more" data-expand>Why it matters ▾</button>
-          <div class="lib-why"><span class="lbl">Why it matters</span><p>Media economics drive studio space, production hubs and the tech stacks behind delivery — all of it real estate and infrastructure in disguise.</p></div>
-        </article>
-
-        <article class="lib-card" data-cats="telecom workplace" id="l6">
-          <div class="art-top"><span class="tag">Telecom</span><span class="tag">Workplace</span><span class="art-rt">3 min</span></div>
-          <h4>Private 5G Gets to Work</h4>
-          <p>Ports, factories and large campuses are deploying their own cellular networks where Wi-Fi falls short — reliable wireless for machines, not just people.</p>
-          <button class="lib-more" data-expand>Why it matters ▾</button>
-          <div class="lib-why"><span class="lbl">Why it matters</span><p>Automation-heavy occupiers will start asking landlords about spectrum the way they ask about power. Connectivity is becoming a building amenity.</p></div>
-        </article>
-
-        <article class="lib-card" data-cats="workplace ai" id="l7">
-          <div class="art-top"><span class="tag">Workplace</span><span class="tag">AI</span><span class="art-rt">4 min</span></div>
-          <h4>The Office Is a Product Again</h4>
-          <p>Fast-growing AI companies are competing for talent with dense, amenity-rich, high-energy offices — and they need them delivered in months, not years.</p>
-          <button class="lib-more" data-expand>Why it matters ▾</button>
-          <div class="lib-why"><span class="lbl">Why it matters</span><p>Speed of fit-out is becoming a competitive advantage. Landlords and project teams that can deliver fast, flexible space will win the AI expansion wave.</p></div>
-        </article>
-
-        <article class="lib-card" data-cats="workplace infrastructure" id="l8">
-          <div class="art-top"><span class="tag">Workplace</span><span class="tag">Smart Buildings</span><span class="art-rt">3 min</span></div>
-          <h4>Smart Buildings Meet Their Payback Math</h4>
-          <p>Sensor networks and AI-driven building operations are finally clearing the ROI bar — cutting energy use and operating cost in buildings that install them well.</p>
-          <button class="lib-more" data-expand>Why it matters ▾</button>
-          <div class="lib-why"><span class="lbl">Why it matters</span><p>Efficiency requirements and energy prices are turning smart-building tech from a nice-to-have into an underwriting line item.</p></div>
-        </article>
-
-      </div>
-
-      <!-- archive -->
-      <div class="sec-head" style="margin-top:72px;margin-bottom:28px">
-        <p class="eyebrow">Back editions</p>
-        <h2 class="h2" style="font-size:clamp(1.7rem,3vw,2.3rem)">The archive</h2>
-      </div>
-      <div class="archive-row">
-        <div class="cover" role="button" tabindex="0" data-demo-toast="This archive edition is not yet available.">
-          <div class="c-meta">Edition 013 · August 2026</div>
-          <h4>The Power Issue</h4>
-          <ul>
-            <li>Inside the interconnection queue</li>
-            <li>Behind-the-meter generation, explained</li>
-            <li>The transformer shortage, year three</li>
-            <li>Utilities become dealmakers</li>
-          </ul>
-          <span class="c-open">Read edition →</span>
-          <button class="c-sw" data-sw-issue="13"><svg width="11" height="11" aria-hidden="true"><use href="#i-bolt"/></svg> Spark Word · Issue 013 · play in archive</button>
-        </div>
-        <div class="cover" role="button" tabindex="0" data-demo-toast="This archive edition is not yet available.">
-          <div class="c-meta">Edition 012 · July 2026</div>
-          <h4>Signal &amp; Stream</h4>
-          <ul>
-            <li>Fiber follows the AI corridors</li>
-            <li>Sports rights reset streaming</li>
-            <li>Private 5G leaves the pilot phase</li>
-            <li>Satellites go direct-to-device</li>
-          </ul>
-          <span class="c-open">Read edition →</span>
-          <button class="c-sw" data-sw-issue="12"><svg width="11" height="11" aria-hidden="true"><use href="#i-bolt"/></svg> Spark Word · Issue 012 · play in archive</button>
-        </div>
-        <div class="cover" role="button" tabindex="0" data-demo-toast="This archive edition is not yet available." id="cov11">
-          <div class="c-meta">Edition 011 · June 2026</div>
-          <h4>Concrete &amp; Code</h4>
-          <ul>
-            <li>Fab labor markets under pressure</li>
-            <li>Modular construction grows up</li>
-            <li>Digital twins hit the job site</li>
-            <li>Robots take the night shift</li>
-          </ul>
-          <span class="c-open">Read edition →</span>
-          <button class="c-sw" data-sw-issue="11"><svg width="11" height="11" aria-hidden="true"><use href="#i-bolt"/></svg> Spark Word · Issue 011 · play in archive</button>
-        </div>
-      </div>
-
-      <!-- subscribe -->
-      <div class="subscribe" id="subscribeBox">
-        <div class="sub-txt">
-          <h3>Get TMT Spark Monthly</h3>
-          <p>One email a month. The most important developments in TMT, explained simply — for operators, investors, builders and the Turner &amp; Townsend teams who serve them.</p>
-        </div>
-        <form class="sub-form" data-mockform="subscribe">
-          <input type="email" placeholder="you@company.com" aria-label="Email address" required>
-          <button class="btn btn-primary" type="submit">Subscribe free</button>
-        </form>
-      </div>
-
+      </article>
     </div>
   </section>
 </section>
-<!-- ================================================================
-     EXPLAIN IT LIKE I'M BUSY
-================================================================= -->
+
+<!-- Explain It -->
 <section class="page" id="page-explain">
   <section class="section">
     <div class="container">
@@ -1987,169 +1667,36 @@ body :is(h1,h2,h3,h4,.serif,.display,.h2,.h3,.sw-title,.sw-tile,.sw-res .r-word,
       <div class="sec-head split">
         <div>
           <p class="eyebrow">Spark Sessions</p>
-          <h2 class="h2">TMT Spark <span style="font-style:italic;color:var(--spark)">Live</span></h2>
-          <p class="lede">Conversations with the people building what's next — in the room and online, with Turner &amp; Townsend teams, clients and industry leaders around the same table.</p>
+          <h2 class="h2">TMT Spark <em>Live</em></h2>
+          <p class="lede">Live conversations with the people shaping Technology, Media &amp; Telecommunications.</p>
         </div>
-        <span class="mono" style="font-size:10.5px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;white-space:nowrap">3 upcoming · Fall 2026</span>
+        <span class="tag">1 upcoming event</span>
       </div>
-
-      <!-- event 1 -->
-      <div class="event" id="ev1">
+      <article class="event" id="ev1">
         <div class="ev-date">
           <span class="ev-day">15</span>
-          <span class="ev-mon">Oct 2026</span>
-          <span class="ev-time">8:00–10:00 AM PT<br>San Francisco</span>
+          <span class="ev-mon">Jan 2027</span>
+          <span class="ev-time">Time and location<br>to be announced</span>
         </div>
         <div class="ev-body">
-          <div class="chips"><span class="chip small fmt">Executive roundtable</span><span class="chip small">Breakfast discussion</span><span class="chip small">Invitation + request</span></div>
-          <h3>Powering the AI Boom</h3>
-          <p class="ev-q">How will the United States build enough energy infrastructure for AI?</p>
+          <div class="chips"><span class="chip small fmt">Live event</span><span class="chip small">Scheduled</span></div>
+          <h3>Live Event 1</h3>
+          <p class="launch-date"><time datetime="2027-01-15">January 15th, 2027</time></p>
           <div class="ev-cols">
-            <div>
-              <span class="lbl">In the room</span>
-              <ul class="ev-panelists">
-                <li><span class="pdot"></span>VP, Compute Infrastructure — AI infrastructure company</li>
-                <li><span class="pdot"></span>SVP, Grid Planning — utility</li>
-                <li><span class="pdot"></span>Chief Development Officer — data center developer</li>
-                <li><span class="pdot"></span>Head of Origination — energy company</li>
-                <li class="cb"><span class="pdot"></span>TMT Sector Leader — Turner &amp; Townsend (moderator)</li>
-              </ul>
-            </div>
-            <div>
-              <span class="lbl">On the table</span>
-              <div class="chips">
-                <span class="chip">Grid constraints</span><span class="chip">Nuclear</span><span class="chip">Natural gas</span>
-                <span class="chip">Renewable energy</span><span class="chip">Behind-the-meter generation</span><span class="chip">Site selection</span>
-              </div>
-            </div>
+            <div><span class="lbl">Hosted by</span><p class="event-host">Andrew Byrne</p></div>
+            <div><span class="lbl">Speakers &amp; topics</span><p class="event-details">To be shared.</p></div>
           </div>
           <div class="ev-foot">
-            <div class="seatwrap">
-              <div class="seatbar"><i style="width:80%"></i></div>
-              <span class="seat-t">32 of 40 seats requested</span>
-            </div>
-            <button class="btn btn-primary" data-reg="Powering the AI Boom">Register <svg class="arr" width="14" height="14" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            <p class="event-details">More details will be announced ahead of the event.</p>
+            <button class="btn btn-primary" data-join>Join Spark for updates</button>
           </div>
         </div>
-      </div>
-
-      <!-- event 2 -->
-      <div class="event" id="ev2">
-        <div class="ev-date">
-          <span class="ev-day">05</span>
-          <span class="ev-mon">Nov 2026</span>
-          <span class="ev-time">3:00–6:00 PM CT<br>Dallas</span>
-        </div>
-        <div class="ev-body">
-          <div class="chips"><span class="chip small fmt">Technology panel</span><span class="chip small">Innovation showcase</span><span class="chip small">Networking</span></div>
-          <h3>The Next Generation Data Center</h3>
-          <p class="ev-q">What changes when every rack is an AI rack?</p>
-          <div class="ev-cols">
-            <div>
-              <span class="lbl">In the room</span>
-              <ul class="ev-panelists">
-                <li><span class="pdot"></span>VP, Data Center Design — hyperscaler</li>
-                <li><span class="pdot"></span>Chief Technology Officer — cooling technology vendor</li>
-                <li><span class="pdot"></span>Preconstruction Director — construction company</li>
-                <li><span class="pdot"></span>Head of Engineering — data center operator</li>
-                <li class="cb"><span class="pdot"></span>Data Center Cost &amp; Program Lead — Turner &amp; Townsend (moderator)</li>
-              </ul>
-            </div>
-            <div>
-              <span class="lbl">On the table</span>
-              <div class="chips">
-                <span class="chip">Liquid cooling</span><span class="chip">AI rack density</span><span class="chip">800V architecture</span>
-                <span class="chip">Power availability</span><span class="chip">Construction cost</span><span class="chip">Supply chain</span>
-              </div>
-            </div>
-          </div>
-          <div class="ev-foot">
-            <div class="seatwrap">
-              <div class="seatbar"><i style="width:48%"></i></div>
-              <span class="seat-t">58 of 120 seats requested</span>
-            </div>
-            <button class="btn btn-primary" data-reg="The Next Generation Data Center">Register <svg class="arr" width="14" height="14" aria-hidden="true"><use href="#i-arrow"/></svg></button>
-          </div>
-        </div>
-      </div>
-
-      <!-- event 3 -->
-      <div class="event" id="ev3">
-        <div class="ev-date">
-          <span class="ev-day">18</span>
-          <span class="ev-mon">Nov 2026</span>
-          <span class="ev-time">9:00 AM PT<br>Virtual</span>
-        </div>
-        <div class="ev-body">
-          <div class="chips"><span class="chip small fmt">Virtual event</span><span class="chip small">Client conversation</span><span class="chip small">Open registration</span></div>
-          <h3>Where Will AI Companies Work?</h3>
-          <p class="ev-q">A conversation about the future of office space for rapidly growing AI companies.</p>
-          <div class="ev-cols">
-            <div>
-              <span class="lbl">On the panel</span>
-              <ul class="ev-panelists">
-                <li><span class="pdot"></span>Head of Real Estate &amp; Workplace — high-growth AI company</li>
-                <li><span class="pdot"></span>Managing Director — venture capital firm</li>
-                <li><span class="pdot"></span>Development Partner — office developer</li>
-                <li class="cb"><span class="pdot"></span>Workplace Strategy Lead — Turner &amp; Townsend (moderator)</li>
-              </ul>
-            </div>
-            <div>
-              <span class="lbl">On the table</span>
-              <div class="chips">
-                <span class="chip">San Francisco AI expansion</span><span class="chip">Workplace design</span><span class="chip">Talent density</span>
-                <span class="chip">Flexible offices</span><span class="chip">Real estate strategy</span><span class="chip">Construction timelines</span>
-              </div>
-            </div>
-          </div>
-          <div class="ev-foot">
-            <div class="seatwrap">
-              <div class="seatbar"><i style="width:34%"></i></div>
-              <span class="seat-t">412 registered · unlimited virtual seats</span>
-            </div>
-            <button class="btn btn-primary" data-reg="Where Will AI Companies Work?">Register <svg class="arr" width="14" height="14" aria-hidden="true"><use href="#i-arrow"/></svg></button>
-          </div>
-        </div>
-      </div>
-
-      <div class="fmt-strip">
-        <span class="lbl" style="margin:0 10px 0 0;align-self:center">Formats</span>
-        <span class="chip small">Executive roundtables</span><span class="chip small">Technology panels</span>
-        <span class="chip small">Client conversations</span><span class="chip small">Breakfast discussions</span>
-        <span class="chip small">Virtual events</span><span class="chip small">Industry networking</span>
-        <span class="chip small">Innovation showcases</span>
-      </div>
-
-      <!-- past -->
-      <div class="sec-head" style="margin-top:72px;margin-bottom:28px">
-        <p class="eyebrow">Recently on Spark Live</p>
-        <h2 class="h2" style="font-size:clamp(1.7rem,3vw,2.3rem)">Past sessions</h2>
-      </div>
-      <div class="past-grid">
-        <div class="past-card" id="pe1">
-          <div class="pc-date">Sep 10 2026 · Breakfast · San Francisco</div>
-          <h4>The Power Wall</h4>
-          <p>48 attendees from 9 companies on what AI demand is doing to West Coast grids.</p>
-        </div>
-        <div class="past-card" id="pe2">
-          <div class="pc-date">Aug 12 2026 · Virtual</div>
-          <h4>Fiber, Fast</h4>
-          <p>310 attendees on the connectivity buildout following AI data center corridors.</p>
-        </div>
-        <div class="past-card" id="pe3">
-          <div class="pc-date">Jul 22 2026 · Roundtable · New York</div>
-          <h4>Capital Meets Compute</h4>
-          <p>22 executives from 11 firms on financing the digital infrastructure wave.</p>
-        </div>
-      </div>
-
+      </article>
     </div>
   </section>
 </section>
 
-<!-- ================================================================
-     INDUSTRIES — ecosystem map
-================================================================= -->
+<!-- Industries -->
 <section class="page" id="page-industries">
   <section class="section">
     <div class="container">
@@ -3333,7 +2880,7 @@ var INDEX=[];
   EXPLAINERS.forEach(function(x,i){
     INDEX.push({t:x.q,sub:"60-sec explainer",type:"Explainers",icon:"i-bolt",act:function(){showPage("explain");setTimeout(function(){openEx(i)},180)}});
   });
-  [["ev1","Powering the AI Boom · Oct 15"],["ev2","The Next Generation Data Center · Nov 5"],["ev3","Where Will AI Companies Work? · Nov 18"]].forEach(function(ev){
+  [["ev1","Live Event 1 · January 15, 2027 · Hosted by Andrew Byrne"]].forEach(function(ev){
     INDEX.push({t:ev[1],sub:"Spark Live",type:"Events",icon:"i-cal",act:function(){goToEl("events",ev[0])}});
   });
   GLOSSARY.forEach(function(g){
