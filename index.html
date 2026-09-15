@@ -1465,6 +1465,26 @@ body :is(h1,h2,h3,h4,.serif,.display,.h2,.h3,.sw-title,.sw-tile,.sw-res .r-word,
 #page-events .ev-foot{border-top:1px solid #D2DAE4;padding-top:24px}
 @media(max-width:600px){.launch-card{padding:26px;gap:20px;flex-direction:column}.launch-pumpkin{font-size:44px}.launch-date{font-size:15px}}
 </style>
+<style id="spark-navigation-buttons">
+/* Clear, generously sized navigation buttons. */
+#top .navlinks{gap:10px}
+#top .navlinks button{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:46px;padding:11px 18px;border:1.5px solid #1E4479;
+  border-radius:8px;background:#FFFFFF;color:#1E4479;
+  font-size:14px;font-weight:600;line-height:1.3;cursor:pointer;
+  transition:background .15s,color .15s,box-shadow .15s;
+}
+#top .navlinks button:hover{background:#E9ECF2;box-shadow:0 2px 7px rgba(30,68,121,.12)}
+#top .navlinks button.on{background:#1E4479;color:#FFFFFF;border-color:#1E4479}
+#top .navlinks button.on::after{content:none}
+#top .navlinks button:focus-visible,#mobilemenu button[data-go]:focus-visible{outline:3px solid #0090DC;outline-offset:3px}
+#mobilemenu button[data-go]{min-height:48px;margin:10px 0;padding:12px 16px;border:1.5px solid #1E4479;border-radius:8px;background:#FFFFFF;color:#1E4479;font-weight:600}
+#mobilemenu button[data-go]:hover{background:#E9ECF2}
+#mobilemenu button[data-go].on{background:#1E4479;color:#FFFFFF}
+#page-spark-word .sw-view{scroll-margin-top:110px}
+@media(max-width:1080px){#top .navlinks{gap:8px}#top .navlinks button{padding:10px 13px;font-size:13px}}
+</style>
 </head>
 <body>
 <!-- ============ icon sprite ============ -->
@@ -1534,10 +1554,6 @@ body :is(h1,h2,h3,h4,.serif,.display,.h2,.h3,.sw-title,.sw-tile,.sw-res .r-word,
       <svg id="heroNet" aria-hidden="true"></svg>
     </div>
     <div class="container hero-inner">
-      <div class="hero-kicker">
-        <span class="k1">TMT Spark</span>
-        <span class="k2">Where TMT ideas, people &amp; opportunities connect</span>
-      </div>
       <h1 class="display">Making sense of <em>what's&nbsp;next</em> in Technology, Media &amp; Telecommunications.</h1>
       <p class="hero-sub">TMT Spark brings together industry leaders, emerging technologies and the people building the future of TMT. Through newsletters, live conversations and industry events, we turn complex developments into practical insights.</p>
       <div class="hero-ctas">
@@ -1605,9 +1621,8 @@ body :is(h1,h2,h3,h4,.serif,.display,.h2,.h3,.sw-title,.sw-tile,.sw-res .r-word,
           <p class="lede">Can you crack Issue <span data-sw-issue-number>014</span>'s Spark Word? Every TMT Spark issue hides a five-letter term from the industries we work in. Solve it, learn what it means, and see how you rank against the TMT industry.</p>
           <div class="hero-ctas">
             <button class="btn btn-primary" data-go="spark-word">Play now <svg class="arr" width="15" height="15" aria-hidden="true"><use href="#i-arrow"/></svg></button>
-            <button class="btn btn-outline" data-go="spark-word" data-sw-view="leaderboard">See the leaderboard</button>
+            <button class="btn btn-outline" data-sw-view="leaderboard">See the leaderboard</button>
           </div>
-          <p class="hero-note" id="swPromoNote"><b>Hundreds of readers</b> play every issue. Can you make the Top 10?</p>
         </div>
       </div>
     </div>
@@ -3806,9 +3821,9 @@ window.SPARK_WORD_CONFIG={
     if (!S.pageShown) return;
     try { history.replaceState(null, "", "#" + PAGE_ID + (view ? "/" + view : "")); } catch (e) {}
   }
-  function openView(view, scroll) {
+  function openView(view, scroll, forceOpen) {
     const same = S.view === view;
-    S.view = same ? null : view;
+    S.view = same && !forceOpen ? null : view;
     $$("#swTabs button").forEach((b) => b.classList.toggle("on", b.getAttribute("data-view") === S.view));
     $$(".sw-view").forEach((v) => v.classList.toggle("on", v.id === "swView-" + S.view));
     setHash(S.view);
@@ -3989,8 +4004,6 @@ window.SPARK_WORD_CONFIG={
   function renderPromo() {
     const n = S.activeIssueNumber || S.latestIssueNumber;
     $$("[data-sw-issue-number]").forEach((el) => { el.textContent = n ? pad3(n) : "—"; });
-    const note = $("#swPromoNote");
-    if (note && S.lastIssue && S.lastIssue.players) note.innerHTML = "<b>" + S.lastIssue.players.toLocaleString("en-US") + " people</b> played " + (DAILY ? "yesterday" : "last issue") + ". Can you make the Top 10?";
   }
   async function primePromo() {
     try {
@@ -4035,8 +4048,13 @@ window.SPARK_WORD_CONFIG={
       renderAll();
       track("spark_word_viewed", { ref: S.entry.ref });
       if (S.pendingReset) { S.pendingReset = false; markOnboarded(); openAuth("reset"); }
+      else if (S.entry.view) {
+        const v = S.entry.view;
+        S.entry.view = null;
+        // Direct links open the requested view after data and layout are ready.
+        openView(v === "how-to-play" ? "howto" : v, true, true);
+      }
       else if (!store.get(KEYS.onboarded)) openOnboarding();
-      if (S.entry.view) { const v = S.entry.view; S.entry.view = null; setTimeout(() => openView(v === "how-to-play" ? "howto" : v), 150); }
       if (S.entry.wantsClaim) { S.entry.wantsClaim = false; }
     } catch (e) {
       console.error(e);
@@ -4206,7 +4224,15 @@ window.SPARK_WORD_CONFIG={
     const def = t.closest("[data-sw-def]"); if (def) { const box = $("#glDef"); if (box) { $$("#glossChips .chip, #swLearnStrip .chip").forEach((c) => c.classList.toggle("on", c === def)); box.innerHTML = "<b>" + esc(def.getAttribute("data-sw-w")) + " · Spark Word, " + NOUNC + " " + pad3(def.getAttribute("data-sw-n")) + "</b>" + esc(def.getAttribute("data-sw-def")); box.classList.add("on"); } return; }
     const rt = t.closest("#swRetry"); if (rt) { onPageShown(); return; }
     const rp = t.closest("[data-sw-replay]"); if (rp) { startReplay(); return; }
-    const view = t.closest("[data-sw-view]"); if (view) { const v = view.getAttribute("data-sw-view"); setTimeout(() => openView(v), 200); return; }
+    const view = t.closest("[data-sw-view]");
+    if (view) {
+      e.preventDefault();
+      S.entry.view = view.getAttribute("data-sw-view");
+      // One route owns initialization, opening and scrolling; no timer race.
+      $$(".veil.on").forEach((v) => TS.closeVeil(v.id));
+      TS.showPage(PAGE_ID);
+      return;
+    }
   });
   /* archive links sit inside demo "cover" cards: intercept in the capture phase so the cover's own click doesn't fire */
   document.addEventListener("click", (e) => {
