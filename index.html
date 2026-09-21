@@ -2096,6 +2096,7 @@ body :is(h1,h2,h3,h4,.serif,.display,.h2,.h3,.sw-title,.sw-tile,.sw-res .r-word,
       <form class="form-grid" id="joinSignupForm">
         <div><label for="jname">Name</label><input id="jname" name="name" type="text" autocomplete="name" placeholder="Alex Rivera" required></div>
         <div><label for="jemail">Work email</label><input id="jemail" name="email" type="email" autocomplete="email" placeholder="you@company.com" required></div>
+        <div><label for="jcompany">Company</label><input id="jcompany" name="company" type="text" autocomplete="organization" placeholder="Turner &amp; Townsend" required></div>
         <p class="sw-claim-note" id="joinError" role="alert"></p>
         <button class="btn btn-primary" type="submit" style="margin-top:6px">Join Spark</button>
       </form>
@@ -2593,8 +2594,10 @@ document.addEventListener("submit",async function(e){
   var form=e.target,err=$("#joinError"),btn=form.querySelector("button[type=submit]");
   var name=(form.elements.name.value||"").trim();
   var email=(form.elements.email.value||"").trim().toLowerCase();
+  var company=(form.elements.company.value||"").trim();
   err.textContent="";
   if(!name){err.textContent="Please enter your name.";return;}
+  if(!company){err.textContent="Please enter your company.";return;}
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){err.textContent="Please enter a valid work email.";return;}
   var parts=name.split(/\s+/),first=parts.shift(),last=parts.join(" ")||null;
   btn.disabled=true;btn.textContent="Sending link…";
@@ -2602,8 +2605,8 @@ document.addEventListener("submit",async function(e){
     var cfg=window.SPARK_WORD_CONFIG||{};
     if(!cfg.supabaseUrl||!cfg.supabaseAnonKey||!window.supabase||!window.supabase.createClient)throw new Error("TMT Spark is not connected yet.");
     if(!joinAuthClient)joinAuthClient=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:true,detectSessionInUrl:true,flowType:"pkce"}});
-    try{localStorage.setItem("sw_pending_claim",JSON.stringify({guest:joinGuestId(),game:null,first:first,last:last,company:null,vis:"full_name",email:email,issue:null}));}catch(storageError){}
-    var result=await joinAuthClient.auth.signInWithOtp({email:email,options:{emailRedirectTo:joinRedirectUrl(),shouldCreateUser:true,data:{first_name:first,last_name:last,visibility:"full_name"}}});
+    try{localStorage.setItem("sw_pending_claim",JSON.stringify({guest:joinGuestId(),game:null,first:first,last:last,company:company,vis:"full_name",email:email,issue:null}));}catch(storageError){}
+    var result=await joinAuthClient.auth.signInWithOtp({email:email,options:{emailRedirectTo:joinRedirectUrl(),shouldCreateUser:true,data:{first_name:first,last_name:last,company:company,visibility:"full_name"}}});
     if(result.error)throw result.error;
     $("#joinSuccessEmail").textContent=email;
     $("#joinForm").style.display="none";
