@@ -2086,30 +2086,6 @@ body :is(h1,h2,h3,h4,.serif,.display,.h2,.h3,.sw-title,.sw-tile,.sw-res .r-word,
   </div>
 </div>
 
-<!-- join -->
-<div class="veil" id="joinVeil">
-  <div class="sheet" role="dialog" aria-label="Join TMT Spark">
-    <button class="x" data-close="joinVeil" aria-label="Close">✕</button>
-    <div id="joinForm">
-      <h3>Join TMT <span style="font-style:italic;color:var(--spark)">Spark</span></h3>
-      <p style="color:var(--mut);font-size:14px;margin:0">The newsletter, event invitations and the community — free, monthly, no pitch.</p>
-      <form class="form-grid" id="joinSignupForm">
-        <div><label for="jname">Name</label><input id="jname" name="name" type="text" autocomplete="name" placeholder="Alex Rivera" required></div>
-        <div><label for="jemail">Work email</label><input id="jemail" name="email" type="email" autocomplete="email" placeholder="you@company.com" required></div>
-        <div><label for="jcompany">Company</label><input id="jcompany" name="company" type="text" autocomplete="organization" placeholder="Turner &amp; Townsend" required></div>
-        <p class="sw-claim-note" id="joinError" role="alert"></p>
-        <button class="btn btn-primary" type="submit" style="margin-top:6px">Join Spark</button>
-      </form>
-      <p class="demo-note"><svg width="13" height="13" aria-hidden="true"><use href="#i-info"/></svg>We’ll email you a secure sign-in link. No password needed.</p>
-    </div>
-    <div class="success" id="joinSuccess">
-      <span class="ok"><svg width="26" height="26" aria-hidden="true"><use href="#i-check"/></svg></span>
-      <h4>Check your email</h4>
-      <p>We sent a secure sign-in link to <b id="joinSuccessEmail" style="color:var(--ink)"></b>. Open it on this device to finish joining TMT Spark.</p>
-    </div>
-  </div>
-</div>
-
 <!-- register -->
 <div class="veil" id="regVeil">
   <div class="sheet" role="dialog" aria-label="Register for event">
@@ -2553,12 +2529,7 @@ document.addEventListener("click",function(e){
   var c=e.target.closest("[data-close]");
   if(c)closeVeil(c.getAttribute("data-close"));
   var j=e.target.closest("[data-join]");
-  if(j){
-    $("#joinForm").style.display="";
-    $("#joinSuccess").classList.remove("on");
-    var joinErr=$("#joinError");if(joinErr)joinErr.textContent="";
-    openVeil("joinVeil");
-  }
+  if(j && window.SparkWord){window.SparkWord.openAuth("signup");}
   var r=e.target.closest("[data-reg]");
   if(r){
     $("#regTitle").textContent=r.getAttribute("data-reg");
@@ -2573,59 +2544,11 @@ function toast(msg){
   clearTimeout(toastTimer);
   toastTimer=setTimeout(function(){$("#toast").classList.remove("on")},3800);
 }
-var joinAuthClient=null;
-function joinGuestId(){
-  var key="sw_guest_id",id=null;
-  try{id=localStorage.getItem(key);}catch(e){}
-  if(!id){
-    id="guest-"+((window.crypto&&crypto.randomUUID)?crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,function(c){var r=Math.random()*16|0,v=c==="x"?r:(r&3|8);return v.toString(16);}));
-    try{localStorage.setItem(key,id);}catch(e){}
-  }
-  return id;
-}
-function joinRedirectUrl(){
-  var cfg=window.SPARK_WORD_CONFIG||{};
-  var base=(cfg.siteUrl||location.origin).replace(/\/$/,"");
-  return base+"/index.html?verify=1#spark-word";
-}
-document.addEventListener("submit",async function(e){
-  if(e.target.id!=="joinSignupForm")return;
-  e.preventDefault();
-  var form=e.target,err=$("#joinError"),btn=form.querySelector("button[type=submit]");
-  var name=(form.elements.name.value||"").trim();
-  var email=(form.elements.email.value||"").trim().toLowerCase();
-  var company=(form.elements.company.value||"").trim();
-  err.textContent="";
-  if(!name){err.textContent="Please enter your name.";return;}
-  if(!company){err.textContent="Please enter your company.";return;}
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){err.textContent="Please enter a valid work email.";return;}
-  var parts=name.split(/\s+/),first=parts.shift(),last=parts.join(" ")||null;
-  btn.disabled=true;btn.textContent="Sending link…";
-  try{
-    var cfg=window.SPARK_WORD_CONFIG||{};
-    if(!cfg.supabaseUrl||!cfg.supabaseAnonKey||!window.supabase||!window.supabase.createClient)throw new Error("TMT Spark is not connected yet.");
-    if(!joinAuthClient)joinAuthClient=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:true,detectSessionInUrl:true,flowType:"pkce"}});
-    try{localStorage.setItem("sw_pending_claim",JSON.stringify({guest:joinGuestId(),game:null,first:first,last:last,company:company,vis:"full_name",email:email,issue:null}));}catch(storageError){}
-    var result=await joinAuthClient.auth.signInWithOtp({email:email,options:{emailRedirectTo:joinRedirectUrl(),shouldCreateUser:true,data:{first_name:first,last_name:last,company:company,visibility:"full_name"}}});
-    if(result.error)throw result.error;
-    $("#joinSuccessEmail").textContent=email;
-    $("#joinForm").style.display="none";
-    $("#joinSuccess").classList.add("on");
-    toast("Check your email to finish joining TMT Spark.");
-  }catch(joinError){
-    console.error(joinError);
-    var message=joinError&&joinError.message?joinError.message:"Please try again.";
-    err.textContent=/rate limit|too many/i.test(message)?"Too many emails were requested. Wait a minute and try again.":"We couldn’t send the sign-in link ("+message+").";
-  }finally{
-    btn.disabled=false;btn.textContent="Join Spark";
-  }
-});
 document.addEventListener("submit",function(e){
   var f=e.target.closest("[data-mockform]");if(!f)return;
   e.preventDefault();
   var kind=f.getAttribute("data-mockform");
   if(kind==="subscribe"){toast("Subscribed — demo only, nothing was sent. Edition 014 would land in your inbox now.");f.reset();}
-  if(kind==="join"){$("#joinForm").style.display="none";$("#joinSuccess").classList.add("on");toast("Welcome to TMT Spark.");}
   if(kind==="register"){$("#regForm").style.display="none";$("#regSuccess").classList.add("on");toast("Seat requested. Nothing was sent.");}
 });
 
@@ -3133,9 +3056,8 @@ window.SPARK_WORD_CONFIG={
     return { rpc, get mode() { return mode; }, client, ready };
   })();
 
-  /* Player accounts (Supabase Auth: email + password, or an emailed link). Preview mode keeps the
-     lightweight "claim your rank" form because there is no auth service to talk to. */
-  const ACCOUNTS = API.mode === "supabase" && CFG.accounts !== false;
+  /* Production accounts use emailed verification codes for signup and sign-in. */
+  const ACCOUNTS = API.mode === "supabase";
 
   /* ---------------- state ---------------- */
   const S = {
@@ -3160,13 +3082,13 @@ window.SPARK_WORD_CONFIG={
       issue: m ? parseInt(m[1], 10) : (q.get("issue") ? parseInt(q.get("issue"), 10) : null),
       token: q.get("t") || null,
       ref: q.get("ref") || (q.get("t") ? "newsletter" : (hp[0] === PAGE_ID ? "link" : "site")),
-      verify: q.get("verify") === "1",
+      verify: q.get("verify") === "1" || q.has("code") || /access_token=|error=|error_code=/.test(hash),
       reset: q.get("reset") === "1",
       preview: q.get("preview") === "1",
       company: q.get("company") || null,   // optional prefill for the one-time claim form (e.g. an internal newsletter's generic link)
       first: q.get("first") || null,
       view: hp[0] === PAGE_ID ? (hp[1] || null) : null,
-      wantsPage: !!m || hp[0] === PAGE_ID || !!q.get("issue") || !!q.get("t")
+      wantsPage: q.has("verify") || q.has("code") || /access_token=|error=/.test(hash) || !!m || hp[0] === PAGE_ID || !!q.get("issue") || !!q.get("t")
     };
     if (e.token) {
       setToken(e.token);
@@ -3655,6 +3577,7 @@ window.SPARK_WORD_CONFIG={
 
   /* ---------------- claim profile (guests) ---------------- */
   function openClaim() {
+    if (API.mode === "supabase") { openAuth("signup"); return; }
     const sheet = $("#swClaimSheet"); if (!sheet) return;
     track("spark_word_claim_opened");
     sheet.innerHTML =
@@ -3713,7 +3636,7 @@ window.SPARK_WORD_CONFIG={
   function verifyRedirectUrl() {
     const base = siteUrl();
     const file = /\.html?$/.test(base) ? base : base + "/index.html";
-    return file + "?issue=" + S.issue.number + "&verify=1";
+    return file + "?verify=1#spark-word";
   }
   async function startVerification(email) {
     const sheet = $("#swClaimSheet");
@@ -3731,8 +3654,13 @@ window.SPARK_WORD_CONFIG={
      pending profile — names fall back to the auth user's metadata on the server. */
   async function completeVerification(opts) {
     const raw = store.get(KEYS.pending);
-    let p = null; if (raw) { try { p = JSON.parse(raw); } catch (e) { store.del(KEYS.pending); } }
+    let p = S.authProfile || null; if (raw) { try { p = JSON.parse(raw); } catch (e) { store.del(KEYS.pending); } }
     try {
+      if (p && API.mode === "supabase") {
+        const { data, error } = await API.client.auth.getUser();
+        if (error) throw error;
+        if (!data || !data.user || (data.user.email || "").toLowerCase() !== (p.email || "").toLowerCase()) p = null;
+      }
       const res = await API.rpc("sw_verified_link", {
         p_guest_id: (p && p.guest) || getGuestId(), p_first_name: p ? p.first : null, p_last_name: p ? p.last : null,
         p_company: p ? p.company : null, p_visibility: p ? p.vis : null, p_game_id: (p && p.game) || (S.game ? S.game.id : null)
@@ -4035,7 +3963,7 @@ window.SPARK_WORD_CONFIG={
         // Direct links open the requested view after data and layout are ready.
         openView(v === "how-to-play" ? "howto" : v, true, true);
       }
-      else if (!store.get(KEYS.onboarded)) openOnboarding();
+      else if (!S.authReturnFailed && !S.entry.verify && !store.get(KEYS.onboarded)) openOnboarding();
       if (S.entry.wantsClaim) { S.entry.wantsClaim = false; }
     } catch (e) {
       console.error(e);
@@ -4048,124 +3976,115 @@ window.SPARK_WORD_CONFIG={
       $("#swBoard").hidden = true; $("#swKbd").hidden = true;
     }
   }
-  /* ---------------- accounts: sign up · sign in · email link · password reset ---------------- */
-  const AUTH_COPY = {
-    signup: { title: "Create your <span style='font-style:italic;color:var(--spark)'>account</span>", lede: "Free, once. Your email is never shown — the leaderboard only shows the name you choose and your company." },
-    signin: { title: "Welcome <span style='font-style:italic;color:var(--spark)'>back</span>", lede: "Sign in and your streak, points and rank follow you to any device." },
-    magic:  { title: "Email me a <span style='font-style:italic;color:var(--spark)'>link</span>", lede: "No password needed — we'll email a one-time sign-in link." },
-    forgot: { title: "Reset your <span style='font-style:italic;color:var(--spark)'>password</span>", lede: "We'll email a link to choose a new one." },
-    reset:  { title: "Choose a new <span style='font-style:italic;color:var(--spark)'>password</span>", lede: "At least 8 characters." }
-  };
+  /* One passwordless flow for Join Spark and game accounts.
+     Supabase Magic Link and Confirm signup templates must contain {{ .Token }}. */
+  let authTimer = null;
   function openAuth(mode) {
-    if (!ACCOUNTS) { if (mode === "signup" || mode === "signin") openClaim(); return; }
-    const sheet = $("#swClaimSheet"); if (!sheet) return;
-    mode = AUTH_COPY[mode] ? mode : "signin";
-    track("spark_word_claim_opened", { mode });
-    const c = AUTH_COPY[mode], em = esc(S.authEmail || "");
-    const emailRow = "<div><label for='swaEmail'>Work email</label><input id='swaEmail' name='email' type='email' autocomplete='" + (mode === "signup" ? "email" : "username") + "' placeholder='you@company.com' value='" + em + "' required></div>";
-    const passRow = (label, ac) => "<div><label for='swaPass'>" + label + "</label><input id='swaPass' name='password' type='password' autocomplete='" + ac + "' minlength='8' required></div>";
-    let form = "";
-    if (mode === "signup") form = emailRow + passRow("Password <small style='color:var(--mut);font-weight:400'>(8+ characters)</small>", "new-password") +
-      "<div style='display:grid;grid-template-columns:1fr 1fr;gap:12px'><div><label for='swaFirst'>First name</label><input id='swaFirst' name='first' type='text' autocomplete='given-name' value='" + esc((S.entry && S.entry.first) || "") + "' required></div>" +
-      "<div><label for='swaLast'>Last name</label><input id='swaLast' name='last' type='text' autocomplete='family-name'></div></div>" +
-      "<div><label for='swaCompany'>Company</label><input id='swaCompany' name='company' type='text' autocomplete='organization' placeholder='Turner & Townsend' value='" + esc((S.entry && S.entry.company) || "") + "' required></div>" +
-      "<div><label>Show me on leaderboards as</label><div class='radio-row'>" +
-      "<label><input type='radio' name='vis' value='first_last_initial' checked> First name + last initial (Sarah M.)</label>" +
-      "<label><input type='radio' name='vis' value='full_name'> Full name</label>" +
-      "<label><input type='radio' name='vis' value='anonymous'> Anonymous</label></div></div>";
-    else if (mode === "signin") form = emailRow + passRow("Password", "current-password");
-    else if (mode === "magic" || mode === "forgot") form = emailRow;
-    else if (mode === "reset") form = passRow("New password", "new-password") + "<div><label for='swaPass2'>Repeat it</label><input id='swaPass2' name='password2' type='password' autocomplete='new-password' minlength='8' required></div>";
-    const submitLabel = { signup: "Create account", signin: "Sign in", magic: "Email me a link", forgot: "Email me a reset link", reset: "Save password" }[mode];
-    const links = {
-      signup: "Already have an account? <button type='button' class='sw-link' data-sw-auth='signin'>Sign in</button>",
-      signin: "New here? <button type='button' class='sw-link' data-sw-auth='signup'>Create an account</button> · <button type='button' class='sw-link' data-sw-auth='magic'>Email me a link instead</button> · <button type='button' class='sw-link' data-sw-auth='forgot'>Forgot password</button>",
-      magic:  "<button type='button' class='sw-link' data-sw-auth='signin'>Use a password instead</button> · <button type='button' class='sw-link' data-sw-auth='signup'>Create an account</button>",
-      forgot: "<button type='button' class='sw-link' data-sw-auth='signin'>Back to sign in</button>",
-      reset:  ""
-    }[mode];
-    sheet.innerHTML =
-      "<button class='x' data-close='swClaimVeil' aria-label='Close'>✕</button>" +
-      "<h3>" + c.title + "</h3><p style='color:var(--mut);font-size:14px;margin:0'>" + c.lede + "</p>" +
-      "<form class='form-grid' id='swAuthForm' data-mode='" + mode + "' novalidate>" + form +
-      "<p class='sw-claim-note' id='swAuthErr' role='alert'></p>" +
-      "<button class='btn btn-primary' type='submit' style='margin-top:4px'>" + submitLabel + "</button></form>" +
-      (links ? "<p class='sw-claim-note'>" + links + "</p>" : "") +
-      (mode === "signin" || mode === "signup" ? "<p class='sw-claim-note' style='opacity:.8'>Got a personal link in the TMT Spark newsletter? Open it from your email and you're recognised automatically — no account needed.</p>" : "");
-    $("#swResultVeil").classList.remove("on");
-    TS.openVeil("swClaimVeil");
-    setTimeout(() => { const f = $("#swAuthForm input"); if (f) f.focus(); }, 80);
-  }
-  function authSent(kind, email) {
-    const sheet = $("#swClaimSheet"); if (!sheet) return;
-    const copy = {
-      confirm: ["Check your email", "We've sent a confirmation link to <b style='color:var(--ink)'>" + esc(email) + "</b>. Open it on this device and you're signed in — this " + NOUN + "'s result comes with you."],
-      magic:   ["Check your email", "A one-time sign-in link is on its way to <b style='color:var(--ink)'>" + esc(email) + "</b>. Open it on this device to sign in."],
-      forgot:  ["Check your email", "If <b style='color:var(--ink)'>" + esc(email) + "</b> has an account, a password reset link is on its way. Open it on this device and choose a new password."]
-    }[kind];
+    if (API.mode !== "supabase") { toast("Account sign-in is currently unavailable. Please try again later."); return; }
+    mode = mode === "signup" ? "signup" : "signin";
+    clearInterval(authTimer);
+    const sheet = $("#swClaimSheet");
+    const email = esc(S.authEmail || "");
     sheet.innerHTML = "<button class='x' data-close='swClaimVeil' aria-label='Close'>✕</button>" +
-      "<div class='sw-verify'><span class='ok'><svg width='24' height='24' aria-hidden='true'><use href='#i-send'/></svg></span><h4>" + copy[0] + "</h4><p>" + copy[1] + "</p>" +
-      "<p class='sw-claim-note' style='margin-top:14px'>Nothing there after a minute? Check your spam folder, or <button type='button' class='sw-link' data-sw-auth='" + (kind === "confirm" ? "signup" : kind) + "'>try again</button>.</p></div>";
+      "<h3>" + (mode === "signup" ? "Join TMT Spark" : "Sign in to TMT Spark") + "</h3>" +
+      "<p>No password needed. We’ll email you a verification code.</p>" +
+      "<form class='form-grid' id='swAuthForm' data-mode='" + mode + "'>" +
+      (mode === "signup" ? "<div><label for='swaName'>Name</label><input id='swaName' name='name' autocomplete='name' required></div><div><label for='swaCompany'>Company</label><input id='swaCompany' name='company' autocomplete='organization' required></div>" : "") +
+      "<div><label for='swaEmail'>Company email</label><input id='swaEmail' name='email' type='email' autocomplete='email' value='" + email + "' required></div>" +
+      "<p>Please check the company email you provide for your verification code. Enter it here to finish " + (mode === "signup" ? "signing up" : "signing in") + ".</p>" +
+      "<p id='swAuthErr' role='alert'></p><button class='btn btn-primary' type='submit'>Email me a code</button></form>" +
+      "<p><button type='button' class='sw-link' data-sw-auth='" + (mode === "signup" ? "signin" : "signup") + "'>" + (mode === "signup" ? "Already joined? Sign in" : "New here? Join Spark") + "</button></p>";
+    $$(".veil.on").forEach(v => TS.closeVeil(v.id));
+    TS.openVeil("swClaimVeil");
+    const input = $("#swAuthForm input"); if (input) input.focus();
   }
-  function resetRedirectUrl() { return verifyRedirectUrl().replace("&verify=1", "&reset=1"); }
-  function authErrorText(e, mode) {
-    const m = (e && (e.message || e.msg)) || "", code = e && (e.code || e.error_code) || "";
-    if (/already registered|already exists|user_already_exists/i.test(m + code)) return "That email already has an account — sign in instead, or use “Forgot password”.";
-    if (/invalid login credentials|invalid_credentials/i.test(m + code)) return mode === "signin" ? "Wrong email or password. New here? Create an account — a newsletter subscriber's history attaches automatically." : "Wrong email or password.";
-    if (/email not confirmed|email_not_confirmed/i.test(m + code)) return "Please confirm your email first — we've sent the link again.";
-    if (/signups not allowed|signup_disabled|otp_disabled/i.test(m + code)) return "No account with that email yet — create one first.";
-    if (/rate limit|over_email_send_rate_limit|too many/i.test(m + code)) return "Too many emails just now — wait a minute and try again.";
-    if (/weak|password should be/i.test(m + code)) return "Choose a longer password (at least 8 characters).";
-    return "Couldn't do that (" + (m || "unknown error") + "). Please try again.";
+  function authErrorText(e) {
+    const message = ((e && e.message) || "") + " " + ((e && e.code) || "");
+    if (/expired|invalid.*token|otp_expired/i.test(message)) return "That code is invalid or has expired. Use the newest email, or request a new code below.";
+    if (/rate|too many|over_email_send/i.test(message)) return "Please wait a minute before requesting another code. If this continues, try again later.";
+    if (/signup.*disabled|signups not allowed|otp_disabled|user not found/i.test(message)) return "We couldn’t send a code. If you’re new here, choose Join Spark first.";
+    return "We couldn’t complete that step. Please check your connection and try again.";
+  }
+  function authSent() {
+    clearInterval(authTimer);
+    const email = esc(S.authEmail || "");
+    $("#swClaimSheet").innerHTML = "<button class='x' data-close='swClaimVeil' aria-label='Close'>✕</button><h3>Check your company email</h3>" +
+      "<p>Please check the company email you provided: <b>" + email + "</b>. Enter the verification code below to finish signing in.</p>" +
+      "<p>Check your junk folder if it hasn’t arrived. Use the code from the newest email. You can read it on any device and enter it here.</p>" +
+      "<form class='form-grid' id='swOtpForm'><div><label for='swOtp'>Verification code</label><input id='swOtp' name='code' type='text' inputmode='numeric' autocomplete='one-time-code' pattern='[0-9]{6,10}' minlength='6' maxlength='10' required></div>" +
+      "<p id='swOtpErr' role='alert'></p><button class='btn btn-primary' type='submit'>Verify and continue</button></form>" +
+      "<p><button type='button' class='sw-link' id='swResendCode'>Send a new code</button> · <button type='button' class='sw-link' data-sw-auth='" + (S.authMode || "signin") + "'>Change email</button></p>";
+    const update = () => {
+      const button = $("#swResendCode"); if (!button) { clearInterval(authTimer); return; }
+      const seconds = Math.max(0, Math.ceil(((S.authNextSend || 0) - Date.now()) / 1000));
+      button.disabled = !!seconds || !!S.authBusy;
+      button.textContent = seconds ? "Send a new code in " + seconds + "s" : "Send a new code";
+    };
+    update(); authTimer = setInterval(update, 1000);
+    $("#swOtp").focus();
+  }
+  async function requestCode() {
+    if (S.authBusy) return false;
+    if (Date.now() < (S.authNextSend || 0)) throw new Error("rate limit");
+    S.authBusy = true;
+    try {
+      const options = { shouldCreateUser: S.authMode === "signup", emailRedirectTo: verifyRedirectUrl() };
+      if (S.authMode === "signup" && S.authProfile) options.data = { first_name: S.authProfile.first, last_name: S.authProfile.last, company: S.authProfile.company, visibility: S.authProfile.vis };
+      const { error } = await API.client.auth.signInWithOtp({ email: S.authEmail, options });
+      if (error) throw error;
+      S.authNextSend = Date.now() + 60000;
+      return true;
+    } finally { S.authBusy = false; }
   }
   async function submitAuth(form) {
-    const mode = form.getAttribute("data-mode"), f = new FormData(form), err = $("#swAuthErr"); err.textContent = "";
-    const email = (f.get("email") || "").trim().toLowerCase(), password = f.get("password") || "";
-    S.authEmail = email || S.authEmail;
-    if (mode !== "reset" && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "Please enter a valid work email."; return; }
-    if ((mode === "signup" || mode === "signin" || mode === "reset") && password.length < 8) { err.textContent = "Password needs at least 8 characters."; return; }
-    const auth = API.client.auth, btn = form.querySelector("button[type=submit]"); btn.disabled = true;
+    const err = $("#swAuthErr"), btn = form.querySelector("button[type=submit]");
+    if (btn.disabled) return;
+    err.textContent = "";
+    const f = new FormData(form), email = String(f.get("email") || "").trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "Please enter your company email."; return; }
+    const mode = form.getAttribute("data-mode");
+    let profile = { guest: getGuestId(), game: S.game ? S.game.id : null, email };
+    if (mode === "signup") {
+      const name = String(f.get("name") || "").trim(), company = String(f.get("company") || "").trim();
+      if (!name || !company) { err.textContent = "Please enter your name and company."; return; }
+      const parts = name.split(/\s+/);
+      Object.assign(profile, { first: parts.shift(), last: parts.join(" ") || null, company, vis: "full_name" });
+    }
+    S.authVerified = false; S.authEmail = email; S.authMode = mode; S.authProfile = profile;
+    btn.disabled = true;
     try {
-      if (mode === "signup") {
-        const first = (f.get("first") || "").trim(), last = (f.get("last") || "").trim() || null, company = (f.get("company") || "").trim(), vis = f.get("vis") || "first_last_initial";
-        if (!first) { err.textContent = "First name is required."; return; }
-        if (!company) { err.textContent = "Company is required."; return; }
-        store.set(KEYS.pending, JSON.stringify({ guest: getGuestId(), game: S.game ? S.game.id : null, first, last, company, vis, email, issue: S.issue && S.issue.number }));
-        const { data, error } = await auth.signUp({ email, password, options: { emailRedirectTo: verifyRedirectUrl(), data: { first_name: first, last_name: last, company, visibility: vis } } });
-        if (error) { err.textContent = authErrorText(error, mode); return; }
-        if (data && data.session) {            // "Confirm email" is off in Supabase → signed in immediately
-          const ok = await completeVerification({ msg: "Welcome, " + first + " — you're on the leaderboard." });
-          if (ok) { TS.closeVeil("swClaimVeil"); await reloadState(); if (S.completion) openResultSheet(); }
-          else err.textContent = "Signed up, but couldn't attach your profile — try signing in.";
-        } else if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-          err.textContent = "That email already has an account — sign in instead, or use “Forgot password”.";   // Supabase hides existing users on sign-up
-        } else authSent("confirm", email);
-      } else if (mode === "signin") {
-        const { error } = await auth.signInWithPassword({ email, password });
-        if (error) { err.textContent = authErrorText(error, mode); return; }
-        const ok = await completeVerification();
-        if (ok) { TS.closeVeil("swClaimVeil"); await reloadState(); if (S.completion) openResultSheet(); }
-        else err.textContent = "Signed in, but couldn't load your profile — please try again.";
-      } else if (mode === "magic") {
-        store.set(KEYS.pending, JSON.stringify({ guest: getGuestId(), game: S.game ? S.game.id : null, email, issue: S.issue && S.issue.number }));
-        const { error } = await auth.signInWithOtp({ email, options: { emailRedirectTo: verifyRedirectUrl(), shouldCreateUser: false } });
-        if (error) { err.textContent = authErrorText(error, mode); return; }
-        authSent("magic", email);
-      } else if (mode === "forgot") {
-        const { error } = await auth.resetPasswordForEmail(email, { redirectTo: resetRedirectUrl() });
-        if (error && !/rate limit/i.test(error.message || "")) { err.textContent = authErrorText(error, mode); return; }
-        authSent("forgot", email);
-      } else if (mode === "reset") {
-        if (password !== (f.get("password2") || "")) { err.textContent = "The two passwords don't match."; return; }
-        const { error } = await auth.updateUser({ password });
-        if (error) { err.textContent = authErrorText(error, mode); return; }
-        S.pendingReset = false;
-        const ok = await completeVerification({ msg: "Password saved — you're signed in." });
-        if (ok) { TS.closeVeil("swClaimVeil"); await reloadState(); }
-        else err.textContent = "Password saved, but couldn't load your profile — sign in with it.";
-      }
-    } catch (e) { console.error(e); err.textContent = "Couldn't reach Spark Word — please try again."; }
+      if (await requestCode()) { store.set(KEYS.pending, JSON.stringify(profile)); authSent(); }
+    } catch (e) { err.textContent = authErrorText(e); }
     finally { btn.disabled = false; }
+  }
+  async function submitCode(form) {
+    const err = $("#swOtpErr"), btn = form.querySelector("button[type=submit]");
+    if (btn.disabled) return;
+    err.textContent = "";
+    const token = String(new FormData(form).get("code") || "").replace(/\s/g, "");
+    if (!/^[0-9]{6,10}$/.test(token)) { err.textContent = "Enter the verification code from your email."; return; }
+    btn.disabled = true;
+    try {
+      if (!S.authVerified) {
+        const { data, error } = await API.client.auth.verifyOtp({ email: S.authEmail, token, type: "email" });
+        if (error) throw error;
+        if (!data || !data.session) throw new Error("No session");
+        S.authVerified = true;
+      }
+      if (!(await completeVerification({ msg: "You’re signed in. Welcome to TMT Spark." }))) {
+        err.textContent = "Your email is verified, but your game profile couldn’t load. Click Verify and continue to retry without requesting another code.";
+        return;
+      }
+      S.authVerified = false; clearInterval(authTimer); TS.closeVeil("swClaimVeil");
+      store.set(KEYS.onboarded, "1");
+      if (!S.pageShown) TS.showPage(PAGE_ID); else await reloadState();
+    } catch (e) { err.textContent = authErrorText(e); }
+    finally { btn.disabled = false; }
+  }
+  async function resendCode() {
+    const err = $("#swOtpErr"); if (err) err.textContent = "";
+    try { if (await requestCode()) { S.authVerified = false; authSent(); } }
+    catch (e) { if (err) err.textContent = authErrorText(e); }
   }
   async function signOut() {
     setToken(null); store.del(KEYS.guest); store.del(KEYS.pending); S.player = null;
@@ -4193,6 +4112,7 @@ window.SPARK_WORD_CONFIG={
     const pr = t.closest("#swPrefsBtn"); if (pr) { openPrefs(); return; }
     const who = t.closest("#swWhoBtn"); if (who) { openWho(); return; }
     const fg = t.closest("#swForget"); if (fg) { signOut(); return; }
+    if (t.closest("#swResendCode")) { resendCode(); return; }
     const au = t.closest("[data-sw-auth]"); if (au) { openAuth(au.getAttribute("data-sw-auth")); return; }
     const st = t.closest("#swStartBtn"); if (st) { markOnboarded(); TS.closeVeil("swOnboardVeil"); return; }
     const onbX = t.closest("#swOnboardSheet .x"); if (onbX) { markOnboarded(); return; }
@@ -4223,6 +4143,7 @@ window.SPARK_WORD_CONFIG={
   }, true);
   document.addEventListener("submit", (e) => {
     if (e.target.id === "swClaimForm") { e.preventDefault(); submitClaim(e.target); }
+    if (e.target.id === "swOtpForm") { e.preventDefault(); submitCode(e.target); }
     if (e.target.id === "swAuthForm") { e.preventDefault(); submitAuth(e.target); }
     if (e.target.id === "swPrefsForm") { e.preventDefault(); savePrefs(e.target); }
   });
@@ -4242,19 +4163,23 @@ window.SPARK_WORD_CONFIG={
       let session = null;
       try { if (API.mode === "supabase") { const { data } = await API.client.auth.getSession(); session = data && data.session; } } catch (e) {}
       try { const u = new URL(location.href); ["verify", "reset", "code", "error", "error_code", "error_description"].forEach((k) => u.searchParams.delete(k)); history.replaceState(null, "", u.pathname + (u.search || "") + "#" + PAGE_ID); } catch (e) {}
-      if (S.entry.reset) { if (session) S.pendingReset = true; else toast("That password link has expired — request a new one."); }
-      else if (session) await completeVerification({ msg: "Email confirmed — you're signed in." });
-      else toast("That link has expired — sign in to get a new one.");
+      if (S.entry.reset) { S.authReturnFailed = true; }
+      else if (session) {
+        const linked = await completeVerification({ msg: "Email confirmed — you're signed in." });
+        if (!linked) S.authReturnFailed = true;
+      }
+      else S.authReturnFailed = true;
     }
 
     if (S.entry.wantsPage && TS.showPage) TS.showPage(PAGE_ID, true);
     else if (document.querySelector("#page-" + PAGE_ID + ".on")) onPageShown();
+    if (S.authReturnFailed) { openAuth("signin"); $("#swAuthErr").textContent = "We couldn’t verify that email link. Request a code below to sign in."; }
     setTimeout(primePromo, 0);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 
   /* small public surface for the admin dashboard / tests */
-  window.SparkWord = { state: S, api: API, track, openView, loadIssue, shareText, version: "1.0.0" };
+  window.SparkWord = { openAuth, state: S, api: API, track, openView, loadIssue, shareText, version: "1.0.0" };
 })();
 
 </script>
