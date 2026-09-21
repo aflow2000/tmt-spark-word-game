@@ -1369,6 +1369,11 @@ footer .logo .by{color:#D2DAE4}
 @media(max-width:1080px){.navwrap{gap:16px}.navlinks{gap:4px}.container{padding-left:28px;padding-right:28px}}
 @media(max-width:820px){.pillars{grid-template-columns:1fr}.pillar{min-height:0}.hero{padding:60px 0}.navwrap{height:76px}.hero-sub{font-size:15px}.section{padding:56px 0}}
 @media(max-width:540px){.container{padding-left:20px;padding-right:20px}.logo .lw{font-size:19px}.logo .lw em{font-size:21px}.logo .by{font-size:7px}.nav-actions{gap:8px}.nav-actions>.btn{font-size:11px;padding:9px 11px}.navwrap{gap:10px}.hero-kicker{gap:8px}.hero-kicker .k2{border:0;padding:0;line-height:1.6}.hero .hero-ctas{gap:10px}.hero .btn{padding:11px 17px;font-size:12px}h1.display{font-size:clamp(2.15rem,8.8vw,3rem)}.sw-stage{padding-left:12px;padding-right:12px}}
+/* Semiconductor video preserves its portrait framing on every screen. */
+#exVeil .sheet{width:min(100%,540px)}
+#exVeil #exTitle{padding-right:24px}
+#exVideo{display:block;width:auto;max-width:100%;height:auto;max-height:65vh;max-height:65dvh;aspect-ratio:9/16;margin:18px auto 0;background:#000;border-radius:8px}
+#exVideoError{font-size:13px;color:var(--mut)}
 </style>
 <!-- Spark Word — game styles (also retained as a normal site asset) -->
 <link rel="stylesheet" href="assets/spark-word.css">
@@ -1663,9 +1668,9 @@ body :is(h1,h2,h3,h4,.serif,.display,.h2,.h3,.sw-title,.sw-tile,.sw-res .r-word,
         <div>
           <p class="eyebrow">Spark Explained</p>
           <h2 class="h2">Explain It Like I'm <span style="font-style:italic;color:var(--spark)">Busy.</span></h2>
-          <p class="lede">Complicated technology concepts in about 60 seconds: what it is, why it matters, who cares, and what happens next. No engineering degree required.</p>
+          <p class="lede">Complicated technology concepts in under two minutes: what it is, why it matters, who cares, and what happens next. No engineering degree required.</p>
         </div>
-        <span class="mono" style="font-size:10.5px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;white-space:nowrap">8 explainers · New weekly</span>
+        <span class="mono" style="font-size:10.5px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;white-space:nowrap">1 explainer · More coming soon</span>
       </div>
 
       <div class="ex-grid" id="exGrid"></div>
@@ -2125,23 +2130,20 @@ body :is(h1,h2,h3,h4,.serif,.display,.h2,.h3,.sw-title,.sw-tile,.sw-res .r-word,
   </div>
 </div>
 
-<!-- explainer modal -->
+<!-- explainer video modal -->
 <div class="veil" id="exVeil">
-  <div class="sheet" role="dialog" aria-label="Explainer">
-    <button class="x" data-close="exVeil" aria-label="Close">✕</button>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="exTitle">
+    <button class="x" data-close="exVeil" aria-label="Close video">✕</button>
     <div style="display:flex;gap:10px;align-items:center;margin-bottom:6px">
-      <span class="ex-60">≈60 SECONDS</span>
+      <span class="ex-60">1:21</span>
       <span class="mono" style="font-size:10px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase" id="exCat"></span>
     </div>
     <h3 id="exTitle"></h3>
-    <div class="ex-modal-sec"><span class="lbl">What it is</span><p id="exWhat"></p></div>
-    <div class="ex-modal-sec"><span class="lbl">Why it matters</span><p id="exWhy"></p></div>
-    <div class="ex-modal-sec"><span class="lbl">Who cares</span><p id="exWho"></p></div>
-    <div class="ex-modal-sec"><span class="lbl">What happens next</span><p id="exNext"></p></div>
-    <div class="ex-nav">
-      <button id="exPrev">← <span></span></button>
-      <button id="exNext2"><span></span> →</button>
-    </div>
+    <video id="exVideo" controls playsinline preload="none" aria-label="Semiconductor explainer video">
+      <source src="spark-explainer-01-semiconductor.mp4" type="video/mp4">
+      Your browser does not support this video. <a href="spark-explainer-01-semiconductor.mp4">Open the video</a>.
+    </video>
+    <p id="exVideoError" hidden role="alert">The video could not load. <a href="spark-explainer-01-semiconductor.mp4" target="_blank" rel="noopener">Try opening it directly</a>.</p>
   </div>
 </div>
 
@@ -2194,46 +2196,7 @@ var SIGNALS=[
 ];
 
 var EXPLAINERS=[
-{q:"What is a GPU?",cat:"AI · Compute",
-what:"A chip built to run thousands of calculations at once. CPUs do a few things very fast; GPUs do a huge number of things in parallel — which is exactly what training and running AI models requires.",
-why:"GPU demand is the force behind the data center, power, cooling and construction boom. When someone says 'AI infrastructure,' they mostly mean buildings full of GPUs.",
-who:"Anyone touching data centers, energy, construction or digital-infrastructure capital — GPU roadmaps set their demand curves.",
-next:"Each chip generation gets denser and hotter, pushing rack power up and forcing new cooling and electrical designs."},
-{q:"What is Liquid Cooling?",cat:"Data Centers",
-what:"Cooling chips with liquid instead of air — usually cold plates piped directly onto the hottest components, sometimes full immersion in special fluid.",
-why:"Air simply can't remove the heat once racks pass roughly 40–50 kW. New AI racks run far beyond that, so liquid is now the default for AI builds.",
-who:"Data center designers, mechanical contractors, equipment vendors, operators — and anyone retrofitting older facilities.",
-next:"'Liquid-ready' becomes the baseline spec, and a large retrofit market forms around older air-cooled buildings."},
-{q:"What is an AI Factory?",cat:"AI · Infrastructure",
-what:"A data center designed as one giant computer with a single job: turn electricity and data into intelligence — training runs, tokens, answers.",
-why:"The framing changes the building. One workload and one tenant mean maximum density, custom power and cooling, and sites chosen for gigawatts, not ZIP codes.",
-who:"Hyperscalers, AI labs, utilities, developers and the construction teams asked to deliver them on extreme schedules.",
-next:"Campuses measured in gigawatts, co-developed with power providers — some with their own generation on site."},
-{q:"What is a Small Modular Reactor?",cat:"Energy",
-what:"A nuclear reactor small enough to be largely factory-built and shipped in modules — tens to a few hundred megawatts, versus a gigawatt-plus for a traditional plant.",
-why:"It promises firm, carbon-free power without a decade of grid queue — which is why data center operators and hyperscalers are watching so closely.",
-who:"Energy providers, regulators, investors, and any large power user with growth plans the grid can't keep up with.",
-next:"First commercial units are targeted for the late 2020s and early 2030s; early sites and regulatory wins will tell us if the math works."},
-{q:"What is Edge Computing?",cat:"Infrastructure",
-what:"Putting compute physically close to where data is created and used — in cities, factories and cell sites — instead of only in giant remote regions.",
-why:"Some applications can't wait for a round trip to a distant cloud: video, robotics, autonomous systems, real-time AI. Distance is latency, and latency is money.",
-who:"Telecoms, data center operators, industrial occupiers, and developers with well-located urban and industrial sites.",
-next:"AI inference pushes a new wave of smaller metro facilities — demand spreads out instead of only piling up."},
-{q:"What is 800V DC?",cat:"Data Centers · Power",
-what:"Distributing power inside a data center at higher-voltage direct current instead of traditional lower-voltage alternating current.",
-why:"Fewer conversions mean less wasted energy, less copper and less heat — which starts to matter enormously when a single rack draws 100 kW or more.",
-who:"Electrical engineers, contractors, switchgear and busway makers — and the operators writing next-generation specs.",
-next:"Reference designs are landing now; expect new AI builds to adopt it and the electrical supply chain and trades to re-skill around it."},
-{q:"What is a Digital Twin?",cat:"Smart Buildings",
-what:"A live virtual model of a real thing — a building, factory or network — kept in sync with real-world data from sensors and systems.",
-why:"You can design, simulate, rehearse and operate before and while you build. On complex projects that means fewer surprises and cheaper mistakes.",
-who:"Developers, construction teams, facilities operators and manufacturers running complex assets.",
-next:"AI agents start operating buildings through their twins — tuning energy, space and maintenance continuously."},
-{q:"What is Private 5G?",cat:"Telecom",
-what:"Your own cellular network, covering just your site, using licensed or shared spectrum — enterprise-grade wireless that you control.",
-why:"Wi-Fi struggles with hundreds of moving machines across huge areas. Ports, factories and campuses need wireless that behaves like infrastructure.",
-who:"Industrial occupiers, telecoms, systems integrators — and landlords whose tenants are automating.",
-next:"Adoption spreads with robotics and automation; connectivity starts showing up in leases the way power does."}
+{q:"What is a Semiconductor?",cat:"Semiconductors",duration:"1:21",video:"spark-explainer-01-semiconductor.mp4"}
 ];
 
 var BRIEFS={
@@ -2517,27 +2480,34 @@ function buildWheel(opts){
   EXPLAINERS.forEach(function(x,i){
     var b=document.createElement("button");
     b.className="ex-card";
-    b.innerHTML='<div class="e-top"><span class="e-cat">'+x.cat+'</span><span class="ex-60">60s</span></div><h3>'+x.q+'</h3><span class="e-go">Explain it <svg width="13" height="13" aria-hidden="true"><use href="#i-arrow"/></svg></span>';
+    b.innerHTML='<div class="e-top"><span class="e-cat">'+x.cat+'</span><span class="ex-60">'+x.duration+'</span></div><h3>'+x.q+'</h3><span class="e-go">Watch video <svg width="13" height="13" aria-hidden="true"><use href="#i-arrow"/></svg></span>';
     b.addEventListener("click",function(){openEx(i);});
     grid.appendChild(b);
   });
 })();
-var exIdx=0;
+var exReturnFocus=null;
 function openEx(i){
-  exIdx=(i+EXPLAINERS.length)%EXPLAINERS.length;
-  var x=EXPLAINERS[exIdx];
+  var x=EXPLAINERS[0];
+  exReturnFocus=document.activeElement;
   $("#exCat").textContent=x.cat;
   $("#exTitle").textContent=x.q;
-  $("#exWhat").textContent=x.what;
-  $("#exWhy").textContent=x.why;
-  $("#exWho").textContent=x.who;
-  $("#exNext").textContent=x.next;
-  $("#exPrev span").textContent=EXPLAINERS[(exIdx-1+EXPLAINERS.length)%EXPLAINERS.length].q;
-  $("#exNext2 span").textContent=EXPLAINERS[(exIdx+1)%EXPLAINERS.length].q;
+  $("#exVideoError").hidden=true;
   openVeil("exVeil");
+  $("#exVeil .x").focus();
+  var video=$("#exVideo");
+  video.load();
+  var playback=video.play();
+  if(playback&&playback.catch)playback.catch(function(){});
 }
-$("#exPrev").addEventListener("click",function(){openEx(exIdx-1);});
-$("#exNext2").addEventListener("click",function(){openEx(exIdx+1);});
+$("#exVideo").addEventListener("error",function(){$("#exVideoError").hidden=false;});
+$("#exVideo source").addEventListener("error",function(){$("#exVideoError").hidden=false;});
+$("#exVeil").addEventListener("keydown",function(e){
+  if(e.key!=="Tab")return;
+  var controls=Array.from(this.querySelectorAll('button,video[controls],a[href]')).filter(function(el){return el.getClientRects().length;});
+  var first=controls[0],last=controls[controls.length-1];
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+});
 
 /* ---------------- article expanders + filters ---------------- */
 document.addEventListener("click",function(e){
@@ -2565,7 +2535,13 @@ document.addEventListener("click",function(e){
 
 /* ---------------- veils / forms / toast ---------------- */
 function openVeil(id){$("#"+id).classList.add("on");document.body.style.overflow="hidden";}
-function closeVeil(id){$("#"+id).classList.remove("on");document.body.style.overflow="";}
+function closeVeil(id){
+  $("#"+id).classList.remove("on");document.body.style.overflow="";
+  if(id==="exVeil"){
+    var video=$("#exVideo");video.pause();video.currentTime=0;
+    if(exReturnFocus&&exReturnFocus.isConnected)exReturnFocus.focus();
+  }
+}
 function anyVeilOpen(){return $$(".veil").some(function(v){return v.classList.contains("on")});}
 $$(".veil").forEach(function(v){
   v.addEventListener("mousedown",function(e){if(e.target===v)closeVeil(v.id);});
@@ -2893,7 +2869,7 @@ var INDEX=[];
     INDEX.push({t:h.textContent,sub:"Story",type:"Stories",icon:"i-doc",act:function(){goToEl("insights",id,function(el){el.classList.add("open")})}});
   });
   EXPLAINERS.forEach(function(x,i){
-    INDEX.push({t:x.q,sub:"60-sec explainer",type:"Explainers",icon:"i-bolt",act:function(){showPage("explain");setTimeout(function(){openEx(i)},180)}});
+    INDEX.push({t:x.q,sub:"Video explainer · "+x.duration,type:"Explainers",icon:"i-bolt",act:function(){showPage("explain");setTimeout(function(){openEx(i)},180)}});
   });
   [["ev1","Live Event 1 · January 15, 2027 · Hosted by Andrew Byrne"]].forEach(function(ev){
     INDEX.push({t:ev[1],sub:"Spark Live",type:"Events",icon:"i-cal",act:function(){goToEl("events",ev[0])}});
