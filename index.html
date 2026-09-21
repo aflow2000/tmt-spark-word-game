@@ -2017,7 +2017,7 @@ body :is(h1,h2,h3,h4,.serif,.display,.h2,.h3,.sw-title,.sw-tile,.sw-res .r-word,
     <div class="container">
       <p class="eyebrow sw-kicker">TMT Spark</p>
       <h1 class="sw-title">Spark <em>Word</em></h1>
-      <div class="sw-issue-line" id="swIssueLine"><span>Loading this issue…</span></div>
+      <div class="sw-issue-line" id="swIssueLine"><span>Loading Spark Word…</span></div>
       <p class="sw-tagline">Five letters. Six guesses. One industry.</p>
       <div class="sw-signin-choice" id="swSigninChoice">
         <p><b>Want to see how you stack up?</b> Sign in to appear on the leaderboard and save your streak, or play for fun as a guest.</p>
@@ -2049,7 +2049,7 @@ body :is(h1,h2,h3,h4,.serif,.display,.h2,.h3,.sw-title,.sw-tile,.sw-res .r-word,
 
   <div class="sw-view" id="swView-leaderboard" role="tabpanel">
     <div class="sw-subtabs" id="swLbTabs">
-      <button type="button" class="chip on" data-lb="issue">This issue</button>
+      <button type="button" class="chip on" data-lb="issue">This week</button>
       <button type="button" class="chip" data-lb="allstars">Spark Word All-Stars</button>
       <button type="button" class="chip" data-lb="companies">Company standings</button>
     </div>
@@ -3270,18 +3270,18 @@ window.SPARK_WORD_CONFIG={
     const line = $("#swIssueLine");
     if (!S.issue) { line.innerHTML = "<span>Spark Word</span>"; return; }
     line.innerHTML =
-      "<span>" + NOUNC + " " + pad3(S.issue.number) + "</span>" +
+      "<span>Spark Word</span>" +
       (S.issue.title ? "<span class='sep'>·</span><span>" + esc(S.issue.title) + "</span>" : "") +
       (S.issue.date ? "<span class='sep'>·</span><span>" + esc(fmtDate(S.issue.date)) + "</span>" : "") +
       nextWordHTML();
-    document.title = "Spark Word · " + NOUNC + " " + pad3(S.issue.number) + " · TMT Spark";
+    document.title = "Spark Word · TMT Spark";
 
     const banner = $("#swModeBanner");
     const mode = S.game ? S.game.mode : S.newGameMode;
     if (mode === "archive") {
       banner.className = "sw-mode-banner";
       banner.innerHTML = "Archive mode · doesn't affect the leaderboard" +
-        (S.activeIssueNumber && S.activeIssueNumber !== S.issue.number ? " &nbsp;<button class='btn btn-ghost btn-sm' style='padding:2px 8px;font-size:11px' data-sw-issue='" + S.activeIssueNumber + "'>Play " + (DAILY ? "today's word" : NOUN + " " + pad3(S.activeIssueNumber)) + " →</button>" : "");
+        (S.activeIssueNumber && S.activeIssueNumber !== S.issue.number ? " &nbsp;<button class='btn btn-ghost btn-sm' style='padding:2px 8px;font-size:11px' data-sw-issue='" + S.activeIssueNumber + "'>Play " + (DAILY ? "today's word" : "this week’s word") + " →</button>" : "");
       banner.hidden = false;
     } else if (mode === "preview") {
       banner.className = "sw-mode-banner preview"; banner.textContent = "Editor preview · this " + NOUN + " is not published"; banner.hidden = false;
@@ -3576,7 +3576,7 @@ window.SPARK_WORD_CONFIG={
   function teaserHTML(c) {
     const nxt = c.next_issue;
     const isSub = !!(c.newsletter_subscriber || (S.player && S.player.newsletter_subscriber));
-    return "<div class='sw-teaser'><div><div class='t-l'>" + (DAILY ? "Tomorrow's Spark Word" + (nxt ? " · " + NOUNC + " " + pad3(nxt.number) : "") : "Next Spark Word drops with " + (nxt ? "Issue " + pad3(nxt.number) : "the next issue")) + "</div>" +
+    return "<div class='sw-teaser'><div><div class='t-l'>" + (DAILY ? "Tomorrow's Spark Word" : "Next Spark Word") + "</div>" +
       (nxt && nxt.date ? "<div class='dim-t' style='font-size:12px;margin-top:3px'>" + esc(fmtDate(nxt.date)) + (function () { const n = daysUntil(nxt.date); return n != null && n > 0 ? " · in " + n + " day" + (n === 1 ? "" : "s") : ""; })() + "</div>" : "") + "</div>" +
       (isSub ? "<p>You're in. We'll see you next issue.</p>" : "<p>Subscribe to TMT Spark so you don't miss it.</p><button class='btn btn-outline btn-sm' type='button' data-join>Subscribe free</button>") + "</div>";
   }
@@ -3634,7 +3634,7 @@ window.SPARK_WORD_CONFIG={
     let line = "";
     if (c.mode === "archive") line = "Archive mode.";
     else if (c.rank && c.rank.rank) line = c.rank.percentile <= 50 ? "Top " + c.rank.percentile + "% " + (DAILY ? "today" : "this issue") + "." : "#" + c.rank.rank + " of " + c.rank.total + " " + (DAILY ? "today" : "this issue") + ".";
-    return ["TMT SPARK WORD · " + NOUNU + " " + pad3(S.issue.number) + " ⚡", score + (c.hint_used ? " · with a Spark" : ""), grid, line, "Can you beat me?", gameUrl()].filter(Boolean).join("\n");
+    return ["TMT SPARK WORD ⚡", score + (c.hint_used ? " · with a Spark" : ""), grid, line, "Can you beat me?", gameUrl()].filter(Boolean).join("\n");
   }
   async function share(kind) {
     if (kind === "link") { copy(gameUrl(), "Game link copied."); track("spark_word_shared", { method: "link" }); return; }
@@ -3723,7 +3723,7 @@ window.SPARK_WORD_CONFIG={
     }
     sheet.innerHTML = "<button class='x' data-close='swClaimVeil' aria-label='Close'>✕</button>" +
       "<div class='sw-verify'><span class='ok'><svg width='24' height='24' aria-hidden='true'><use href='#i-send'/></svg></span>" +
-      "<h4>Check your email</h4><p><b style='color:var(--ink)'>" + esc(email) + "</b> is already a TMT Spark subscriber, so we've sent a one-time link to confirm it's you. Open it on this device and your rank for " + NOUNC + " " + pad3(S.issue.number) + " attaches automatically.</p>" +
+      "<h4>Check your email</h4><p><b style='color:var(--ink)'>" + esc(email) + "</b> is already a TMT Spark subscriber, so we've sent a one-time link to confirm it's you. Open it on this device and your Spark Word rank attaches automatically.</p>" +
       (API.mode === "preview" ? "<p style='margin-top:14px'><button type='button' class='btn btn-outline btn-sm' id='swPreviewVerify'>Preview: simulate clicking the link</button></p>" : "") + "</div>";
   }
   /* With a Supabase session in hand (magic link, confirmation link, password sign-in, password reset),
@@ -3835,7 +3835,7 @@ window.SPARK_WORD_CONFIG={
     const n = S.issue ? S.issue.number : null;
     const d = await API.rpc("sw_issue_leaderboard", Object.assign({ p_issue_number: n, p_limit: 10 }, ident()));
     if (!d.ok) { body.innerHTML = "<div class='sw-empty'>No leaderboard yet.</div>"; return; }
-    let h = "<div class='sec-head' style='margin-bottom:16px'><p class='eyebrow'>" + NOUNC + " " + pad3(d.issue.number) + " leaderboard</p>" +
+    let h = "<div class='sec-head' style='margin-bottom:16px'><p class='eyebrow'>Spark Word leaderboard</p>" +
       "<p class='lede' style='font-size:14px'>" + d.total_players.toLocaleString("en-US") + " players · " + (d.solved_pct == null ? "—" : d.solved_pct + "%") + " solved · ranked by fewest guesses, then no hint, then time.</p></div>";
     h += "<span class='lbl'>Top 10</span>";
     if (!d.top.length) h += "<div class='sw-table-wrap'><div class='sw-empty'>No one has solved " + (DAILY ? "today's word" : "this issue") + " yet — be the first.</div></div>";
@@ -3882,12 +3882,12 @@ window.SPARK_WORD_CONFIG={
       if (!d.ok) { el.hidden = true; return; }
       S.lastIssue = d;
       const word = d.revealed ? esc(d.answer) : "<span class='dim-t' aria-label='hidden'>" + esc(d.answer_masked) + "</span><button type='button' data-sw-issue='" + d.issue.number + "' title='Play it first'>Play it first →</button>";
-      el.innerHTML = "<p class='so-l'>" + (DAILY ? "Yesterday's Spark Word · Day " + pad3(d.issue.number) + " · " + esc(fmtDate(d.issue.date)) : "Last issue's Spark Word · Issue " + pad3(d.issue.number) + " · " + esc(fmtMonth(d.issue.date))) + "</p>" +
+      el.innerHTML = "<p class='so-l'>" + (DAILY ? "Yesterday's Spark Word · " + esc(fmtDate(d.issue.date)) : "Previous Spark Word · " + esc(fmtMonth(d.issue.date))) + "</p>" +
         "<p class='so-word'>" + word + "</p>" +
         "<div class='so-stats'><div>" + (d.players || 0).toLocaleString("en-US") + "<span>Players</span></div><div>" + (d.solved_pct == null ? "—" : d.solved_pct + "%") + "<span>Solved</span></div></div>" +
         (d.top && d.top.length ? "<p class='so-l'>Fastest minds</p><ol>" + d.top.map((t) => "<li><span class='on2'>" + t.rank + "</span><span>" + esc(t.name) + "</span><span class='co'>· " + esc(t.company || "") + "</span><span class='gs'>" + t.guesses + "/6</span></li>").join("") + "</ol>" : "") +
         (d.company_champion ? "<div class='so-champ'><span class='so-l' style='margin:0'>Company champion</span><b>" + esc(d.company_champion) + "</b></div>" : "") +
-        "<p class='so-cta'>Think you can do better? " + (S.activeIssueNumber ? "<button type='button' data-sw-issue='" + S.activeIssueNumber + "'>Play " + (DAILY ? "today's word" : "Issue " + pad3(S.activeIssueNumber)) + " →</button>" : "") + "</p>";
+        "<p class='so-cta'>Think you can do better? " + (S.activeIssueNumber ? "<button type='button' data-sw-issue='" + S.activeIssueNumber + "'>Play " + (DAILY ? "today's word" : "this week’s word") + " →</button>" : "") + "</p>";
       el.hidden = false;
     } catch (e) { el.hidden = true; }
   }
@@ -3908,7 +3908,7 @@ window.SPARK_WORD_CONFIG={
           : played ? "<button type='button' class='btn btn-outline btn-sm' data-sw-issue='" + i.number + "'>" + (i.is_active ? "View result" : "Replay in archive mode") + "</button>"
           : "<button type='button' class='btn btn-outline btn-sm' data-sw-issue='" + i.number + "'>" + (i.is_active ? "Continue" : "Play in archive mode") + "</button>";
         if (played) indexRevealedWord(i.number, my.answer, i.category, my.definition);
-        return "<div class='sw-arch" + (i.is_active ? " active" : "") + "' id='swArch" + i.number + "'><div class='a-top'><span class='a-meta'>" + NOUNC + " " + pad3(i.number) + " · " + esc(DAILY ? fmtDate(i.date) : fmtMonth(i.date)) + (i.is_active ? " · <span class='g'>Current</span>" : "") + "</span><span class='tag'>" + esc(i.category) + "</span></div>" +
+        return "<div class='sw-arch" + (i.is_active ? " active" : "") + "' id='swArch" + i.number + "'><div class='a-top'><span class='a-meta'>" + esc(DAILY ? fmtDate(i.date) : fmtMonth(i.date)) + (i.is_active ? " · <span class='g'>Current</span>" : "") + "</span><span class='tag'>" + esc(i.category) + "</span></div>" +
           "<h4>" + esc(i.title || "") + "</h4>" + status +
           "<div class='a-foot'>" + btn + "<span class='a-players'>" + (i.players_completed || 0).toLocaleString("en-US") + " played" + (i.solved_pct != null ? " · " + i.solved_pct + "% solved" : "") + "</span></div></div>";
       }).join("");
@@ -3948,12 +3948,12 @@ window.SPARK_WORD_CONFIG={
   function indexRevealedWord(n, word, category, definition) {
     if (!TS.INDEX || !word) return;
     const key = "w" + n; if (S.indexed[key]) return; S.indexed[key] = 1;
-    TS.INDEX.push({ t: word + " — " + NOUNC + " " + pad3(n) + (category ? " · " + category : ""), sub: "Spark Word", type: "Spark Word", icon: "i-bolt",
+    TS.INDEX.push({ t: word + (category ? " · " + category : ""), sub: "Spark Word", type: "Spark Word", icon: "i-bolt",
       act: () => { TS.showPage(PAGE_ID); setTimeout(() => { openView("archive"); setTimeout(() => { const el = $("#swArch" + n); if (el && TS.flashEl) TS.flashEl(el); }, 400); }, 120); } });
   }
   function indexStatic() {
     if (!TS.INDEX || S.indexed.static) return; S.indexed.static = 1;
-    TS.INDEX.push({ t: "Spark Word" + (S.issue ? " — " + NOUNC + " " + pad3(S.issue.number) : ""), sub: "Play", type: "Spark Word", icon: "i-bolt", act: () => TS.showPage(PAGE_ID) });
+    TS.INDEX.push({ t: "Spark Word", sub: "Play", type: "Spark Word", icon: "i-bolt", act: () => TS.showPage(PAGE_ID) });
     TS.INDEX.push({ t: "Spark Word leaderboard", sub: "All-Stars · companies", type: "Spark Word", icon: "i-chart", act: () => { TS.showPage(PAGE_ID); setTimeout(() => openView("leaderboard"), 120); } });
     TS.INDEX.push({ t: "Past Spark Words", sub: "Archive", type: "Spark Word", icon: "i-book", act: () => { TS.showPage(PAGE_ID); setTimeout(() => openView("archive"), 120); } });
     TS.INDEX.push({ t: "How to play Spark Word", sub: "Rules", type: "Spark Word", icon: "i-info", act: () => { TS.showPage(PAGE_ID); setTimeout(() => openView("howto"), 120); } });
@@ -4003,7 +4003,7 @@ window.SPARK_WORD_CONFIG={
       if (!S.boot) { panel.hidden = true; return; }       // nothing loaded yet — don't flash an empty-state panel
       panel.hidden = false;
       const err = S.boot && S.boot.error;
-      panel.innerHTML = err === "issue_not_published" ? "<h3>This " + NOUN + " isn't open yet.</h3><p>" + (DAILY ? "That word unlocks at midnight. Play today's in the meantime." : "The Spark Word for that issue goes live with the newsletter. Play the current issue in the meantime.") + "</p>" + (S.activeIssueNumber ? "<button class='btn btn-primary btn-sm' data-sw-issue='" + S.activeIssueNumber + "'>Play " + (DAILY ? "today's word" : "Issue " + pad3(S.activeIssueNumber)) + "</button>" : "")
+      panel.innerHTML = err === "issue_not_published" ? "<h3>This " + NOUN + " isn't open yet.</h3><p>" + (DAILY ? "That word unlocks at midnight. Play today's in the meantime." : "The Spark Word for that issue goes live with the newsletter. Play the current issue in the meantime.") + "</p>" + (S.activeIssueNumber ? "<button class='btn btn-primary btn-sm' data-sw-issue='" + S.activeIssueNumber + "'>Play " + (DAILY ? "today's word" : "this week’s word") + "</button>" : "")
         : "<h3>No Spark Word is live right now.</h3><p>" + (DAILY ? "Come back tomorrow for the next word." : "The next word drops with the next issue of TMT Spark.") + "</p><button class='btn btn-outline btn-sm' data-join>Subscribe free</button>";
       $("#swBoard").hidden = true; $("#swKbd").hidden = true; res.hidden = true;
       return;
@@ -4202,7 +4202,7 @@ window.SPARK_WORD_CONFIG={
     const mth = t.closest(".sw-methodology button"); if (mth) { const w = mth.parentElement; w.classList.toggle("open"); mth.setAttribute("aria-expanded", w.classList.contains("open") ? "true" : "false"); return; }
     const iss = t.closest("[data-sw-issue]"); if (iss) { $$(".veil.on").forEach((v) => TS.closeVeil(v.id)); if (!S.pageShown) { TS.showPage(PAGE_ID); } loadIssue(parseInt(iss.getAttribute("data-sw-issue"), 10)); return; }
     const ln = t.closest("[data-sw-learn]"); if (ln) { $$(".veil.on").forEach((v) => TS.closeVeil(v.id)); goLearn(ln.getAttribute("data-sw-learn"), ln.getAttribute("data-sw-ref")); return; }
-    const def = t.closest("[data-sw-def]"); if (def) { const box = $("#glDef"); if (box) { $$("#glossChips .chip, #swLearnStrip .chip").forEach((c) => c.classList.toggle("on", c === def)); box.innerHTML = "<b>" + esc(def.getAttribute("data-sw-w")) + " · Spark Word, " + NOUNC + " " + pad3(def.getAttribute("data-sw-n")) + "</b>" + esc(def.getAttribute("data-sw-def")); box.classList.add("on"); } return; }
+    const def = t.closest("[data-sw-def]"); if (def) { const box = $("#glDef"); if (box) { $$("#glossChips .chip, #swLearnStrip .chip").forEach((c) => c.classList.toggle("on", c === def)); box.innerHTML = "<b>" + esc(def.getAttribute("data-sw-w")) + " · Spark Word</b>" + esc(def.getAttribute("data-sw-def")); box.classList.add("on"); } return; }
     const rt = t.closest("#swRetry"); if (rt) { onPageShown(); return; }
     const rp = t.closest("[data-sw-replay]"); if (rp) { startReplay(); return; }
     const view = t.closest("[data-sw-view]");
