@@ -4197,5 +4197,22 @@ window.SPARK_WORD_CONFIG={
   syncSigninChoice();
 })();
 </script>
+<script>
+/* Newsletter links open the same Join Spark form as the header button. */
+(function(){
+  var params=new URLSearchParams(location.search);
+  if(params.get("join")!=="1")return;
+  function openJoin(){
+    if(window.SparkWord && typeof window.SparkWord.openAuth==="function"){
+      window.SparkWord.openAuth("signup");
+    }
+  }
+  if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",openJoin,{once:true});
+  }else{
+    openJoin();
+  }
+})();
+</script>
 </body>
 </html>
