@@ -1,3 +1,8 @@
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1931,6 +1936,77 @@ h1.display,h1.display em{color:#1E4479!important}
 #page-explain > .section:first-child .sec-head,#page-events > .section:first-child .sec-head,#page-industries > .section:first-child .sec-head,
 #page-insights .sec-head{background:#BFDFF3;box-shadow:0 0 0 100vmax #BFDFF3;clip-path:inset(0 -100vmax);padding:56px 0 44px!important;margin-bottom:40px!important;border:0!important}
 .ticker,.ticker-label{background:#FFFFFF!important}
+</style><style id="tt-hero-v3">
+/* Home banner in the turnerandtownsend.com style: deep navy band with the network
+   pattern, white serif headline with a sky-blue accent, white primary button and
+   translucent quick-link cards with circled arrows. */
+.hero{background:linear-gradient(115deg,#000011 0%,#0B1E3F 48%,#1E4479 100%)!important;padding:64px 0 56px!important;color:#FFFFFF!important;
+  --ink:#FFFFFF;--mut:#D2DAE4;--spark:#80C8EE;position:relative;overflow:hidden}
+.hero-bg{display:block!important}
+.hero-bg .glow{display:none!important}
+.hero-bg .gridlines{opacity:.07!important}
+#heroNet{opacity:.32!important}
+.hero-inner{display:grid!important;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:48px;align-items:end;position:relative}
+h1.display,h1.display em{color:#FFFFFF!important}
+h1.display{font-size:clamp(2.6rem,5vw,4.2rem)!important;margin:0 0 16px!important}
+h1.display em{color:#80C8EE!important;font-style:italic!important}
+.hero-sub{color:#D2DAE4!important;max-width:520px;margin:0 0 28px!important}
+.hero .btn-primary{background:#FFFFFF!important;border-color:#FFFFFF!important;color:#1E4479!important}
+.hero .btn-primary:hover{background:#E9ECF2!important;border-color:#E9ECF2!important}
+.hero .btn-outline{background:transparent!important;border-color:rgba(255,255,255,.8)!important;color:#FFFFFF!important}
+.hero .btn-outline:hover{background:rgba(255,255,255,.12)!important}
+.hero .btn-ghost{color:#FFFFFF!important}
+.hero-cards{display:grid;gap:10px}
+.hero-card{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;align-items:center;text-align:left;width:100%;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:16px 18px;color:#FFFFFF;cursor:pointer;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:background .2s ease,border-color .2s ease}
+.hero-card:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.35)}
+.hero-card:focus-visible{outline:3px solid #80C8EE!important;outline-offset:3px}
+.hc-k{grid-column:1;font-size:11px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:#80C8EE}
+.hc-t{grid-column:1;font-family:"Georgia Pro",Georgia,"Times New Roman",serif!important;font-size:20px;line-height:1.25;color:#FFFFFF;margin-top:4px}
+.hc-go{grid-column:2;grid-row:1 / span 2;width:34px;height:34px;border:1.5px solid #FFFFFF;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#FFFFFF}
+.hc-go svg{color:#FFFFFF}
+.ticker{border-top:0!important}
+@media (max-width:860px){
+  .hero-inner{grid-template-columns:1fr;gap:28px}
+  .hero{padding:40px 0 36px!important}
+  h1.display{font-size:2.4rem!important}
+  .hc-t{font-size:17px}
+  .hero-card{padding:13px 16px}
+}
+</style><style id="tt-page-headers-navy">
+/* every tab's header band matches the home banner: deep navy gradient, white serif heading, sky-blue accents */
+#page-explain > .section:first-child .sec-head,#page-events > .section:first-child .sec-head,
+#page-industries > .section:first-child .sec-head,#page-insights .sec-head,#page-spark-word .sw-hero{
+  background:transparent!important;box-shadow:none!important;clip-path:none!important;color:#FFFFFF;position:relative;isolation:isolate}
+#page-explain > .section:first-child .sec-head::before,#page-events > .section:first-child .sec-head::before,
+#page-industries > .section:first-child .sec-head::before,#page-insights .sec-head::before,#page-spark-word .sw-hero::before{
+  content:"";position:absolute;top:0;bottom:0;left:calc(50% - 50vw);width:100vw;z-index:-1;
+  background:linear-gradient(115deg,#000011 0%,#0B1E3F 48%,#1E4479 100%)}
+#page-explain > .section:first-child,#page-events > .section:first-child,#page-industries > .section:first-child,#page-insights > .section:first-child,#page-spark-word{overflow-x:clip}
+#page-explain > .section:first-child .sec-head *,#page-events > .section:first-child .sec-head *,
+#page-industries > .section:first-child .sec-head *,#page-insights .sec-head *{color:#D2DAE4!important;border-color:rgba(255,255,255,.35)!important}
+:is(#page-explain,#page-events,#page-industries) > .section:first-child .sec-head :is(h1,h2,.h2),#page-insights .sec-head :is(h1,h2,.h2){color:#FFFFFF!important}
+:is(#page-explain,#page-events,#page-industries) > .section:first-child .sec-head :is(h1,h2,.h2) em,#page-insights .sec-head :is(h1,h2,.h2) em{color:#80C8EE!important}
+:is(#page-explain,#page-events,#page-industries) > .section:first-child .sec-head .eyebrow,#page-insights .sec-head .eyebrow{color:#80C8EE!important}
+:is(#page-explain,#page-events,#page-industries) > .section:first-child .sec-head :is(.chip,.tag),#page-insights .sec-head :is(.chip,.tag){background:transparent!important}
+/* Spark Word header */
+#page-spark-word .sw-title,#page-spark-word .sw-title em{color:#FFFFFF!important}
+#page-spark-word .sw-title em{color:#80C8EE!important}
+#page-spark-word .sw-issue-line{color:#D2DAE4!important}
+#page-spark-word .sw-issue-line :is(.sw-sector,.sw-next em){color:#80C8EE!important}
+#page-spark-word .sw-signin-choice{background:rgba(255,255,255,.08)!important;border:1px solid rgba(255,255,255,.18)!important}
+#page-spark-word .sw-signin-choice p,#page-spark-word .sw-signin-choice p b{color:#FFFFFF!important}
+#page-spark-word .sw-signin-choice .btn-primary{background:#FFFFFF!important;border-color:#FFFFFF!important;color:#1E4479!important}
+#page-spark-word .sw-signin-choice .btn-outline{border-color:rgba(255,255,255,.8)!important;color:#FFFFFF!important;background:transparent!important}
+#page-spark-word .sw-identity{background:rgba(255,255,255,.08)!important;color:#FFFFFF!important}
+#page-spark-word .sw-identity *{color:#FFFFFF!important}
+#page-spark-word .sw-mode-banner{background:rgba(255,255,255,.08)!important;color:#FFFFFF!important;border-color:rgba(255,255,255,.2)!important}
+/* About first section */
+#page-about > .section:first-child{background:linear-gradient(115deg,#000011 0%,#0B1E3F 48%,#1E4479 100%)!important}
+#page-about > .section:first-child *{color:#D2DAE4!important}
+#page-about > .section:first-child :is(h1,h2,.h2,.bigline){color:#FFFFFF!important}
+#page-about > .section:first-child :is(em,.eyebrow){color:#80C8EE!important}
 </style></head>
 <body>
 <!-- ============ icon sprite ============ -->
@@ -2004,12 +2080,19 @@ h1.display,h1.display em{color:#1E4479!important}
       <svg id="heroNet" aria-hidden="true"></svg>
     </div>
     <div class="container hero-inner">
+      <div class="hero-copy">
       <h1 class="display">What's <em>next</em> in TMT.</h1>
       <p class="hero-sub">Newsletters, live events and quick explainers for the Technology, Media &amp; Telecom community.</p>
       <div class="hero-ctas">
         <button class="btn btn-primary" data-go="insights" title="Past newsletters and highlights from live events">Previous Newsletters <svg class="arr" width="15" height="15" aria-hidden="true"><use href="#i-arrow"/></svg></button>
         <button class="btn btn-outline" data-go="events">Upcoming Events</button>
         <button class="btn btn-ghost" data-join>Join TMT Spark →</button>
+      </div>
+      </div>
+      <div class="hero-cards" aria-label="Quick links">
+        <button class="hero-card" data-go="spark-word"><span class="hc-k">Play</span><span class="hc-t">Today's Spark Word</span><span class="hc-go" aria-hidden="true"><svg width="12" height="12"><use href="#i-arrow"/></svg></span></button>
+        <button class="hero-card" data-go="explain"><span class="hc-k">Explain It</span><span class="hc-t">What is a semiconductor?</span><span class="hc-go" aria-hidden="true"><svg width="12" height="12"><use href="#i-arrow"/></svg></span></button>
+        <button class="hero-card" data-go="events"><span class="hc-k">Spark Live</span><span class="hc-t">15 January 2027</span><span class="hc-go" aria-hidden="true"><svg width="12" height="12"><use href="#i-arrow"/></svg></span></button>
       </div>
     </div>
   </div>
@@ -4696,3 +4779,6 @@ window.SPARK_WORD_CONFIG={
 </script>
 </body>
 </html>
+
+
+
